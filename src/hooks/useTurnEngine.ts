@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useDebateStore, buildSystemPrompt } from '../store/debateStore'
 import { streamCompletion, OpenRouterError } from '../lib/openRouter'
-import { isDemoMode } from '../lib/demo'
+import { isDemoMode, setServerProxyAvailable } from '../lib/demo'
 import { useDemoEngine } from './useDemoEngine'
 
 interface UseTurnEngineReturn {
@@ -92,7 +92,11 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
       }
     } catch (err) {
       finishTurn(turnId)
-      if (err instanceof OpenRouterError) {
+      if (err instanceof OpenRouterError && err.status === 503) {
+        // Proxy not configured — fall back to demo for all subsequent turns
+        setServerProxyAvailable(false)
+        onError('Live mode unavailable — falling back to demo.')
+      } else if (err instanceof OpenRouterError) {
         onError(`API error: ${err.message}. Switching to demo mode — remove your key to reload demo.`)
       } else if (err instanceof Error && err.name !== 'AbortError') {
         onError(`Turn failed: ${err.message}`)

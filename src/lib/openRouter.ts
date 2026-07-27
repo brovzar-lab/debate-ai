@@ -15,26 +15,37 @@ export async function* streamCompletion(
   systemPrompt: string,
   signal?: AbortSignal
 ): AsyncGenerator<string> {
-  const key = getOpenRouterKey()
-  if (!key) throw new OpenRouterError('No API key configured')
+  const byoKey = getOpenRouterKey()
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'DEBATE AI',
-    },
-    body: JSON.stringify({
-      model: modelId,
-      stream: true,
-      messages: [{ role: 'user', content: systemPrompt }],
-      max_tokens: 400,
-      temperature: 0.85,
-    }),
-    signal,
-  })
+  let response: Response
+  if (byoKey !== null && byoKey.trim() !== '' && byoKey !== 'REPLACE_WITH_VALUE') {
+    // BYO key: call OpenRouter directly, key stays client-side
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${byoKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'DEBATE AI',
+      },
+      body: JSON.stringify({
+        model: modelId,
+        stream: true,
+        messages: [{ role: 'user', content: systemPrompt }],
+        max_tokens: 400,
+        temperature: 0.85,
+      }),
+      signal,
+    })
+  } else {
+    // No BYO key: use server proxy (key stays server-side)
+    response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: modelId, systemPrompt }),
+      signal,
+    })
+  }
 
   if (!response.ok) {
     await response.text().catch(() => '')
