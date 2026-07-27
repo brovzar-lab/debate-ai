@@ -15,6 +15,7 @@ export interface Debater {
   model: Model
   personaName: string
   stance: string
+  voiceId?: string
 }
 
 export interface DebateConfig {

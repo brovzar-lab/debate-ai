@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useDebateStore } from '../../store/debateStore'
+import { useVoiceStore } from '../../store/voiceStore'
 import { useTurnEngine } from '../../hooks/useTurnEngine'
+import { useVoiceQueue } from '../../hooks/useVoiceQueue'
 import { DebaterBubble } from './DebaterBubble'
 import { TurnIndicator } from './TurnIndicator'
 import { DirectorControls } from './DirectorControls'
 import { ToastManager } from '../shared/Toast'
 import { isDemoMode } from '../../lib/demo'
+import type { Debater, Side } from '../../types'
 
 interface ArenaScreenProps {
   onReset: () => void
@@ -20,6 +23,7 @@ let toastCounter = 0
 
 export function ArenaScreen({ onReset }: ArenaScreenProps) {
   const { config, turns, phase, currentSide, turnCount, setDirectorInstruction } = useDebateStore()
+  const { enabled: voiceEnabled, leftMuted, rightMuted, speakingSide, toggleEnabled, setLeftMuted, setRightMuted } = useVoiceStore()
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const transcriptRef = useRef<HTMLDivElement>(null)
   const isRunningRef = useRef(false)
@@ -30,6 +34,9 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   }, [])
 
   const { runNextTurn, abortCurrentTurn } = useTurnEngine(pushToast)
+
+  // Wire up sentence-by-sentence voice playback
+  useVoiceQueue()
 
   const isStreaming = turns.some((t) => t.status === 'streaming')
 
@@ -75,22 +82,44 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
     <div className="flex h-screen flex-col bg-zinc-950 text-white">
       {/* Header / debater identities */}
       <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/70 px-6 py-3 shadow-md">
-        <DebaterHeader debater={leftDebater} side="left" />
+        <DebaterHeader
+          debater={leftDebater}
+          side="left"
+          isSpeaking={speakingSide === 'left'}
+          isMuted={leftMuted}
+          onToggleMute={() => setLeftMuted(!leftMuted)}
+        />
 
         <div className="flex flex-col items-center gap-1 px-4">
           <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">vs</span>
-          <button
-            onClick={() => {
-              abortCurrentTurn()
-              onReset()
-            }}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            ← New debate
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Global voice toggle */}
+            <button
+              onClick={toggleEnabled}
+              className="rounded-md bg-zinc-800 px-2 py-1 text-sm transition-colors hover:bg-zinc-700"
+              title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
+            >
+              {voiceEnabled ? '🔊' : '🔇'}
+            </button>
+            <button
+              onClick={() => {
+                abortCurrentTurn()
+                onReset()
+              }}
+              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              ← New debate
+            </button>
+          </div>
         </div>
 
-        <DebaterHeader debater={rightDebater} side="right" />
+        <DebaterHeader
+          debater={rightDebater}
+          side="right"
+          isSpeaking={speakingSide === 'right'}
+          isMuted={rightMuted}
+          onToggleMute={() => setRightMuted(!rightMuted)}
+        />
       </div>
 
       {/* Transcript */}
@@ -136,23 +165,43 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
 }
 
 interface DebaterHeaderProps {
-  debater: { model: { color: string; emoji: string }; personaName: string; stance: string }
-  side: 'left' | 'right'
+  debater: Debater
+  side: Side
+  isSpeaking: boolean
+  isMuted: boolean
+  onToggleMute: () => void
 }
 
-function DebaterHeader({ debater, side }: DebaterHeaderProps) {
+function DebaterHeader({ debater, side, isSpeaking, isMuted, onToggleMute }: DebaterHeaderProps) {
   const isRight = side === 'right'
   return (
     <div className={`flex items-center gap-3 ${isRight ? 'flex-row-reverse text-right' : ''}`}>
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl"
-        style={{ backgroundColor: debater.model.color + '22', border: `2px solid ${debater.model.color}` }}
-      >
-        {debater.model.emoji}
+      <div className="relative">
+        {/* Speaking pulse ring */}
+        {isSpeaking && (
+          <span
+            className="absolute inset-0 rounded-full animate-ping opacity-60"
+            style={{ backgroundColor: debater.model.color + '44' }}
+          />
+        )}
+        <div
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl"
+          style={{ backgroundColor: debater.model.color + '22', border: `2px solid ${debater.model.color}` }}
+        >
+          {debater.model.emoji}
+        </div>
       </div>
       <div>
-        <p className="font-bold text-sm" style={{ color: debater.model.color }}>
+        <p className="font-bold text-sm flex items-center gap-1.5" style={{ color: debater.model.color }}>
           {debater.personaName}
+          {/* Per-debater mute */}
+          <button
+            onClick={onToggleMute}
+            className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs leading-none"
+            title={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted ? '🔇' : '🔉'}
+          </button>
         </p>
         <p className="text-xs text-zinc-500 max-w-[160px] leading-tight truncate" title={debater.stance}>
           {debater.stance}

@@ -4,6 +4,7 @@ import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
 import { isDemoMode, getOpenRouterKey, setOpenRouterKey, clearOpenRouterKey } from '../../lib/demo'
+import { DEFAULT_VOICE_IDS } from '../../lib/tts'
 import {
   DEMO_TOPIC,
   DEMO_DEBATERS,
@@ -27,6 +28,8 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [rightPersona, setRightPersona] = useState(demo ? DEMO_DEBATERS.right.personaName : '')
   const [leftStance, setLeftStance] = useState(demo ? DEMO_DEBATERS.left.stance : '')
   const [rightStance, setRightStance] = useState(demo ? DEMO_DEBATERS.right.stance : '')
+  const [leftVoiceId, setLeftVoiceId] = useState<string>(DEFAULT_VOICE_IDS.left)
+  const [rightVoiceId, setRightVoiceId] = useState<string>(DEFAULT_VOICE_IDS.right)
   const [turnCap, setTurnCap] = useState(5)
   const [apiKey, setApiKey] = useState(getOpenRouterKey() ?? '')
   const [showSettings, setShowSettings] = useState(false)
@@ -53,12 +56,14 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       model: leftModel!,
       personaName: leftPersona || leftModel!.name,
       stance: leftStance || 'Pro side',
+      voiceId: leftVoiceId,
     }
     const rightDebater: Debater = {
       side: 'right',
       model: rightModel!,
       personaName: rightPersona || rightModel!.name,
       stance: rightStance || 'Con side',
+      voiceId: rightVoiceId,
     }
 
     onStart({
@@ -135,18 +140,22 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             model={leftModel}
             personaName={leftPersona}
             stance={leftStance}
+            voiceId={leftVoiceId}
             onModelDrop={setLeftModel}
             onPersonaChange={setLeftPersona}
             onStanceChange={setLeftStance}
+            onVoiceChange={setLeftVoiceId}
           />
           <DebaterPodium
             side="right"
             model={rightModel}
             personaName={rightPersona}
             stance={rightStance}
+            voiceId={rightVoiceId}
             onModelDrop={setRightModel}
             onPersonaChange={setRightPersona}
             onStanceChange={setRightStance}
+            onVoiceChange={setRightVoiceId}
           />
         </div>
 
