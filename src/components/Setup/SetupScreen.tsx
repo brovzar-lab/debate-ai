@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Model, DebateConfig, Debater } from '../../types'
 import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
 import { isDemoMode, getOpenRouterKey, setOpenRouterKey, clearOpenRouterKey } from '../../lib/demo'
 import { DEFAULT_VOICE_IDS } from '../../lib/tts'
+import { useAvailableModels } from '../../hooks/useAvailableModels'
 import {
   DEMO_TOPIC,
   DEMO_DEBATERS,
@@ -16,6 +17,7 @@ interface SetupScreenProps {
 
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const demo = isDemoMode()
+  const { models: availableModels, loading: modelsLoading, unavailableCount } = useAvailableModels()
 
   const [topic, setTopic] = useState(demo ? DEMO_TOPIC : '')
   const [leftModel, setLeftModel] = useState<Model | null>(
@@ -24,6 +26,16 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [rightModel, setRightModel] = useState<Model | null>(
     demo ? (MODELS.find((m) => m.id === 'claude-3-5-sonnet') ?? null) : null
   )
+
+  // After live-mode validation completes, clear any selected model that is no
+  // longer in the validated palette. Clearing sets it to null; the next run
+  // short-circuits on the `null &&` guard, so this never loops.
+  useEffect(() => {
+    if (modelsLoading) return
+    const availableIds = new Set(availableModels.map((m) => m.id))
+    if (leftModel && !availableIds.has(leftModel.id)) setLeftModel(null)
+    if (rightModel && !availableIds.has(rightModel.id)) setRightModel(null)
+  }, [modelsLoading, availableModels, leftModel, rightModel])
   const [leftPersona, setLeftPersona] = useState(demo ? DEMO_DEBATERS.left.personaName : '')
   const [rightPersona, setRightPersona] = useState(demo ? DEMO_DEBATERS.right.personaName : '')
   const [leftStance, setLeftStance] = useState(demo ? DEMO_DEBATERS.left.stance : '')
@@ -46,7 +58,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     }
   }
 
-  const canStart = topic.trim() && leftModel && rightModel
+  const canStart = topic.trim() && leftModel && rightModel && !modelsLoading
 
   const handleStart = () => {
     if (!canStart) return
@@ -163,16 +175,33 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">
             Model Palette — drag onto a podium
+            {!demo && unavailableCount > 0 && (
+              <span className="ml-2 normal-case font-normal text-amber-500/70">
+                ({unavailableCount} unavailable on OpenRouter, hidden)
+              </span>
+            )}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {MODELS.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                isAssigned={assignedModelIds.has(model.id)}
-              />
-            ))}
-          </div>
+          {modelsLoading ? (
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-12 w-32 rounded-xl bg-zinc-800 animate-pulse"
+                />
+              ))}
+              <p className="w-full text-xs text-zinc-600 mt-1">Checking model availability…</p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableModels.map((model) => (
+                <ModelCard
+                  key={model.id}
+                  model={model}
+                  isAssigned={assignedModelIds.has(model.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Turn cap + CTA */}
