@@ -1,0 +1,68 @@
+import { Model } from '../types'
+
+export const MODELS: Model[] = [
+  {
+    id: 'gpt-4o',
+    name: 'GPT-4o',
+    provider: 'OpenAI',
+    openrouterId: 'openai/gpt-4o',
+    color: '#10a37f',
+    emoji: '🤖',
+  },
+  {
+    id: 'claude-3-5-sonnet',
+    name: 'Claude 3.5 Sonnet',
+    provider: 'Anthropic',
+    openrouterId: 'anthropic/claude-3.5-sonnet',
+    color: '#d97706',
+    emoji: '🧠',
+  },
+  {
+    id: 'gemini-pro-1-5',
+    name: 'Gemini Pro 1.5',
+    provider: 'Google',
+    openrouterId: 'google/gemini-pro-1.5',
+    color: '#4285f4',
+    emoji: '💎',
+  },
+  {
+    id: 'llama-3-1-70b',
+    name: 'Llama 3.1 70B',
+    provider: 'Meta',
+    openrouterId: 'meta-llama/llama-3.1-70b-instruct',
+    color: '#0668e1',
+    emoji: '🦙',
+  },
+  {
+    id: 'mistral-large',
+    name: 'Mistral Large',
+    provider: 'Mistral',
+    openrouterId: 'mistralai/mistral-large',
+    color: '#ff7000',
+    emoji: '🌬️',
+  },
+  {
+    id: 'deepseek-r1',
+    name: 'DeepSeek R1',
+    provider: 'DeepSeek',
+    openrouterId: 'deepseek/deepseek-r1',
+    color: '#6366f1',
+    emoji: '🔬',
+  },
+  {
+    id: 'qwen-2-5-72b',
+    name: 'Qwen 2.5 72B',
+    provider: 'Alibaba',
+    openrouterId: 'qwen/qwen-2.5-72b-instruct',
+    color: '#f59e0b',
+    emoji: '🏮',
+  },
+  {
+    id: 'command-r-plus',
+    name: 'Command R+',
+    provider: 'Cohere',
+    openrouterId: 'cohere/command-r-plus',
+    color: '#39d353',
+    emoji: '⚡',
+  },
+]
