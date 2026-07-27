@@ -1,5 +1,26 @@
 import type { IncomingMessage, ServerResponse } from 'http'
-import { getVoiceSettings } from '../src/lib/voiceSettings'
+
+// Inlined from src/lib/voiceSettings — Vercel serverless functions cannot import
+// across into the app's src/ tree (breaks the function bundle → FUNCTION_INVOCATION_FAILED).
+interface VoiceSettings {
+  stability: number
+  similarity_boost: number
+  style: number
+  use_speaker_boost: boolean
+}
+
+const VOICE_SETTINGS_BY_INTENSITY: Record<number, VoiceSettings> = {
+  1: { stability: 0.85, similarity_boost: 0.8, style: 0.0, use_speaker_boost: true },
+  2: { stability: 0.7, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true },
+  3: { stability: 0.55, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true },
+  4: { stability: 0.35, similarity_boost: 0.7, style: 0.65, use_speaker_boost: true },
+  5: { stability: 0.2, similarity_boost: 0.65, style: 0.9, use_speaker_boost: true },
+}
+
+function getVoiceSettings(intensity: number): VoiceSettings {
+  const clamped = Math.min(5, Math.max(1, Math.round(intensity)))
+  return VOICE_SETTINGS_BY_INTENSITY[clamped] ?? VOICE_SETTINGS_BY_INTENSITY[3]
+}
 
 interface TtsBody {
   text?: unknown
