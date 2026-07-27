@@ -44,12 +44,9 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   // Turn loop driver
   useEffect(() => {
     if (phase !== 'debating' && phase !== 'concluding') return
-    if (isStreaming || isRunningRef.current) return
+    if (isStreaming) return
 
-    isRunningRef.current = true
-    runNextTurn().finally(() => {
-      isRunningRef.current = false
-    })
+    runNextTurn()
   }, [phase, isStreaming, runNextTurn])
 
   if (!config) return null
