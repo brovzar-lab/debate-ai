@@ -37,7 +37,7 @@ export async function* streamCompletion(
   })
 
   if (!response.ok) {
-    const text = await response.text().catch(() => '')
+    await response.text().catch(() => '')
     throw new OpenRouterError(`OpenRouter error: ${response.statusText}`, response.status)
   }
 

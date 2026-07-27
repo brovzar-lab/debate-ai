@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { buildSystemPrompt } from '../debateStore'
-import { DebateConfig, Debater } from '../../types'
+import { DebateConfig } from '../../types'
 import { MODELS } from '../../data/models'
 
 const leftModel = MODELS[0]

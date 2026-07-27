@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react'
-import { Side } from '../types'
 import { useDebateStore, buildSystemPrompt } from '../store/debateStore'
 import { streamCompletion, OpenRouterError } from '../lib/openRouter'
 import { isDemoMode } from '../lib/demo'

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DebateConfig, DebatePhase, DebateState, Side, Turn, TurnStatus } from '../types'
+import { DebateConfig, DebateState, Side, TurnStatus } from '../types'
 
 interface DebateStore extends DebateState {
   startDebate: (config: DebateConfig) => void
