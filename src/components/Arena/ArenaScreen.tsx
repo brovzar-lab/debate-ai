@@ -4,11 +4,11 @@ import { useVoiceStore } from '../../store/voiceStore'
 import { useTurnEngine } from '../../hooks/useTurnEngine'
 import { useVoiceQueue } from '../../hooks/useVoiceQueue'
 import { DebaterBubble } from './DebaterBubble'
+import { SpeakerHeader } from './SpeakerHeader'
 import { TurnIndicator } from './TurnIndicator'
 import { DirectorControls } from './DirectorControls'
 import { ToastManager } from '../shared/Toast'
 import { isDemoMode } from '../../lib/demo'
-import type { Debater, Side } from '../../types'
 
 interface ArenaScreenProps {
   onReset: () => void
@@ -23,10 +23,10 @@ let toastCounter = 0
 
 export function ArenaScreen({ onReset }: ArenaScreenProps) {
   const { config, turns, phase, currentSide, turnCount, setDirectorInstruction } = useDebateStore()
-  const { enabled: voiceEnabled, leftMuted, rightMuted, speakingSide, toggleEnabled, setLeftMuted, setRightMuted } = useVoiceStore()
+  const { enabled: voiceEnabled, leftMuted, rightMuted, toggleEnabled, setLeftMuted, setRightMuted } =
+    useVoiceStore()
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const transcriptRef = useRef<HTMLDivElement>(null)
-  const isRunningRef = useRef(false)
 
   const pushToast = useCallback((message: string) => {
     const id = `toast-${++toastCounter}`
@@ -39,6 +39,7 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   useVoiceQueue()
 
   const isStreaming = turns.some((t) => t.status === 'streaming')
+  const newestTurnId = turns.at(-1)?.id
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -47,21 +48,20 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
     }
   }, [turns])
 
-  // Turn loop driver
+  // Turn loop driver (isStreaming guard is sufficient — see APPU-1421)
   useEffect(() => {
     if (phase !== 'debating' && phase !== 'concluding') return
-    if (isStreaming || isRunningRef.current) return
+    if (isStreaming) return
 
-    isRunningRef.current = true
-    runNextTurn().finally(() => {
-      isRunningRef.current = false
-    })
+    runNextTurn()
   }, [phase, isStreaming, runNextTurn])
 
   if (!config) return null
 
   const leftDebater = config.debaters[0]
   const rightDebater = config.debaters[1]
+  const leftIsActive = currentSide === 'left'
+  const isDone = phase === 'done'
 
   const handleProvoke = () => {
     if (isDemoMode()) {
@@ -71,7 +71,6 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
         "The director just said: 'You gonna let them talk to you like that?' — respond with more passion and fight back harder."
       )
     }
-    pushToast('🔥 Provocation injected into next turn!')
   }
 
   const handleWrapUp = () => {
@@ -80,23 +79,25 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-white">
-      {/* Header / debater identities */}
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/70 px-6 py-3 shadow-md">
-        <DebaterHeader
+      {/* Fighter header — arena staging */}
+      <div className="flex shrink-0 items-center border-b border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-lg">
+        <SpeakerHeader
           debater={leftDebater}
           side="left"
-          isSpeaking={speakingSide === 'left'}
+          isActive={leftIsActive && !isDone}
+          isStreaming={isStreaming && leftIsActive}
+          phase={phase}
           isMuted={leftMuted}
           onToggleMute={() => setLeftMuted(!leftMuted)}
         />
 
-        <div className="flex flex-col items-center gap-1 px-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">vs</span>
+        <div className="flex shrink-0 flex-col items-center gap-1 px-3">
+          <span className="text-[11px] font-black uppercase tracking-widest text-zinc-600">vs</span>
           <div className="flex items-center gap-2">
             {/* Global voice toggle */}
             <button
               onClick={toggleEnabled}
-              className="rounded-md bg-zinc-800 px-2 py-1 text-sm transition-colors hover:bg-zinc-700"
+              className="rounded-md bg-zinc-800 px-2 py-0.5 text-sm transition-colors hover:bg-zinc-700"
               title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
             >
               {voiceEnabled ? '🔊' : '🔇'}
@@ -106,17 +107,19 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
                 abortCurrentTurn()
                 onReset()
               }}
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+              className="text-[10px] text-zinc-700 hover:text-zinc-400 transition-colors whitespace-nowrap"
             >
-              ← New debate
+              ← new
             </button>
           </div>
         </div>
 
-        <DebaterHeader
+        <SpeakerHeader
           debater={rightDebater}
           side="right"
-          isSpeaking={speakingSide === 'right'}
+          isActive={!leftIsActive && !isDone}
+          isStreaming={isStreaming && !leftIsActive}
+          phase={phase}
           isMuted={rightMuted}
           onToggleMute={() => setRightMuted(!rightMuted)}
         />
@@ -128,21 +131,26 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
         className="flex-1 overflow-y-auto px-4 py-6 md:px-8"
         style={{ scrollBehavior: 'smooth' }}
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-5">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {/* Topic banner */}
-          <div className="rounded-xl bg-zinc-800/50 py-3 px-5 text-center text-sm italic text-zinc-400">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 px-5 text-center text-sm italic text-zinc-500">
             "{config.topic}"
           </div>
 
           {turns.map((turn) => (
-            <DebaterBubble key={turn.id} turn={turn} config={config} />
+            <DebaterBubble
+              key={turn.id}
+              turn={turn}
+              config={config}
+              isNewest={turn.id === newestTurnId}
+            />
           ))}
         </div>
       </div>
 
       {/* Turn indicator + director controls */}
       <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/90 px-4 py-3 shadow-lg">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2.5">
           <TurnIndicator
             currentSide={currentSide}
             config={config}
@@ -160,53 +168,6 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
       </div>
 
       <ToastManager toasts={toasts} onDismiss={(id) => setToasts((p) => p.filter((t) => t.id !== id))} />
-    </div>
-  )
-}
-
-interface DebaterHeaderProps {
-  debater: Debater
-  side: Side
-  isSpeaking: boolean
-  isMuted: boolean
-  onToggleMute: () => void
-}
-
-function DebaterHeader({ debater, side, isSpeaking, isMuted, onToggleMute }: DebaterHeaderProps) {
-  const isRight = side === 'right'
-  return (
-    <div className={`flex items-center gap-3 ${isRight ? 'flex-row-reverse text-right' : ''}`}>
-      <div className="relative">
-        {/* Speaking pulse ring */}
-        {isSpeaking && (
-          <span
-            className="absolute inset-0 rounded-full animate-ping opacity-60"
-            style={{ backgroundColor: debater.model.color + '44' }}
-          />
-        )}
-        <div
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl"
-          style={{ backgroundColor: debater.model.color + '22', border: `2px solid ${debater.model.color}` }}
-        >
-          {debater.model.emoji}
-        </div>
-      </div>
-      <div>
-        <p className="font-bold text-sm flex items-center gap-1.5" style={{ color: debater.model.color }}>
-          {debater.personaName}
-          {/* Per-debater mute */}
-          <button
-            onClick={onToggleMute}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs leading-none"
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? '🔇' : '🔉'}
-          </button>
-        </p>
-        <p className="text-xs text-zinc-500 max-w-[160px] leading-tight truncate" title={debater.stance}>
-          {debater.stance}
-        </p>
-      </div>
     </div>
   )
 }

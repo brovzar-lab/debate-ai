@@ -70,18 +70,20 @@ describe('TurnIndicator', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('progress bar advances with turn count', () => {
-    const { container: c1 } = render(
+  it('progress advances with turn count (segment bar + round counter)', () => {
+    const { container, unmount } = render(
       <TurnIndicator {...baseProps} currentSide="left" phase="debating" isStreaming={false} turnCount={0} />
     )
-    const { container: c2 } = render(
+    // Segment bar renders turnCap*2 segments
+    expect(container.querySelectorAll('.w-3').length).toBe(6)
+    expect(screen.getByText(/Round 1\/3/)).toBeInTheDocument()
+    unmount()
+
+    render(
       <TurnIndicator {...baseProps} currentSide="left" phase="debating" isStreaming={false} turnCount={3} />
     )
-    // Progress bar div has inline style width; 3/(3*2) = 50%
-    const bar1 = c1.querySelector('[style*="width"]') as HTMLElement
-    const bar2 = c2.querySelector('[style*="width"]') as HTMLElement
-    expect(bar1?.style.width).toBe('0%')
-    expect(bar2?.style.width).toBe('50%')
+    // After 3 turns we're in round 2
+    expect(screen.getByText(/Round 2\/3/)).toBeInTheDocument()
   })
 
   it('left and right debaters show distinct names (distinct voices UX)', () => {

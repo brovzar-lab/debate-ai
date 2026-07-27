@@ -60,27 +60,27 @@ describe('DirectorControls — Pause/Resume', () => {
 describe('DirectorControls — Wrap-up', () => {
   it('shows Wrap It Up button when debating', () => {
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={vi.fn()} isStreaming={false} />)
-    expect(screen.getByRole('button', { name: /Wrap It Up/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Wrap Up/i })).toBeInTheDocument()
   })
 
   it('clicking Wrap It Up calls onWrapUp and transitions to concluding', () => {
     const onWrapUp = vi.fn()
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={onWrapUp} isStreaming={false} />)
-    fireEvent.click(screen.getByRole('button', { name: /Wrap It Up/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Wrap Up/i }))
     expect(onWrapUp).toHaveBeenCalledOnce()
     expect(useDebateStore.getState().phase).toBe('concluding')
   })
 
   it('Wrap It Up button disabled while streaming', () => {
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={vi.fn()} isStreaming={true} />)
-    expect(screen.getByRole('button', { name: /Wrap It Up/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Wrap Up/i })).toBeDisabled()
   })
 
   it('shows closing statements banner in concluding phase, not button', () => {
     useDebateStore.setState({ phase: 'concluding' })
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={vi.fn()} isStreaming={false} />)
-    expect(screen.getByText(/Closing statements/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Wrap It Up/i })).toBeNull()
+    expect(screen.getByText(/Final statements/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Wrap Up/i })).toBeNull()
   })
 
   it('shows concluded banner in done phase', () => {
@@ -103,15 +103,15 @@ describe('DirectorControls — Provoke', () => {
     expect(screen.getByRole('button', { name: /Provoke/i })).toBeDisabled()
   })
 
-  it('Provoke button disabled when concluding', () => {
+  it('Provoke button not shown when concluding', () => {
     useDebateStore.setState({ phase: 'concluding' })
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={vi.fn()} isStreaming={false} />)
-    expect(screen.getByRole('button', { name: /Provoke/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Provoke/i })).toBeNull()
   })
 
-  it('Provoke button disabled when done', () => {
+  it('Provoke button not shown when done', () => {
     useDebateStore.setState({ phase: 'done' })
     render(<DirectorControls onProvoke={vi.fn()} onWrapUp={vi.fn()} isStreaming={false} />)
-    expect(screen.getByRole('button', { name: /Provoke/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Provoke/i })).toBeNull()
   })
 })
