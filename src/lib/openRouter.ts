@@ -10,6 +10,33 @@ export class OpenRouterError extends Error {
   }
 }
 
+// HTTP/2 responses (Vercel/OpenRouter) have an empty statusText, so we must
+// dig the real message out of the body. Handles both OpenRouter's native
+// shape ({ error: { message } }) and our /api/chat proxy shape ({ error }),
+// where `error` may itself be a stringified OpenRouter error.
+function extractErrorMessage(raw: string, status: number): string {
+  let message = ''
+  try {
+    const parsed = JSON.parse(raw)
+    const err = parsed?.error
+    if (typeof err === 'string') {
+      // Proxy may forward a stringified upstream error — try to unwrap it.
+      try {
+        message = JSON.parse(err)?.error?.message ?? err
+      } catch {
+        message = err
+      }
+    } else if (err && typeof err.message === 'string') {
+      message = err.message
+    }
+  } catch {
+    message = raw.trim()
+  }
+
+  message = (message || 'the model returned an error').slice(0, 200)
+  return `OpenRouter error (${status}): ${message}`
+}
+
 export async function* streamCompletion(
   modelId: string,
   systemPrompt: string,
@@ -48,8 +75,8 @@ export async function* streamCompletion(
   }
 
   if (!response.ok) {
-    await response.text().catch(() => '')
-    throw new OpenRouterError(`OpenRouter error: ${response.statusText}`, response.status)
+    const raw = await response.text().catch(() => '')
+    throw new OpenRouterError(extractErrorMessage(raw, response.status), response.status)
   }
 
   const reader = response.body?.getReader()

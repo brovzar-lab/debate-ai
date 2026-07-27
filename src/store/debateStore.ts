@@ -11,6 +11,7 @@ interface DebateStore extends DebateState {
   addTurn: (side: Side, turnNumber: number) => string
   appendToTurn: (id: string, chunk: string) => void
   finishTurn: (id: string) => void
+  removeTurn: (id: string) => void
   setIntensity: (level: number) => void
   setDirectorInstruction: (instruction: string | null) => void
   advanceSide: () => void
@@ -71,6 +72,11 @@ export const useDebateStore = create<DebateStore>((set, get) => ({
   finishTurn: (id) =>
     set((state) => ({
       turns: state.turns.map((t) => (t.id === id ? { ...t, status: 'done' as TurnStatus } : t)),
+    })),
+
+  removeTurn: (id) =>
+    set((state) => ({
+      turns: state.turns.filter((t) => t.id !== id),
     })),
 
   setIntensity: (level) => set({ intensity: Math.min(5, Math.max(1, level)) }),

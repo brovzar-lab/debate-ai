@@ -24,9 +24,11 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     addTurn,
     appendToTurn,
     finishTurn,
+    removeTurn,
     advanceSide,
     startConcluding,
     endDebate,
+    pauseDebate,
   } = useDebateStore()
 
   const abortCurrentTurn = useCallback(() => {
@@ -91,16 +93,28 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
         endDebate()
       }
     } catch (err) {
-      finishTurn(turnId)
-      if (err instanceof OpenRouterError && err.status === 503) {
-        // Proxy not configured — fall back to demo for all subsequent turns
-        setServerProxyAvailable(false)
-        onError('Live mode unavailable — falling back to demo.')
-      } else if (err instanceof OpenRouterError) {
-        onError(`API error: ${err.message}. Switching to demo mode — remove your key to reload demo.`)
-      } else if (err instanceof Error && err.name !== 'AbortError') {
-        onError(`Turn failed: ${err.message}`)
+      // Drop the empty bubble this failed turn created so it doesn't linger.
+      removeTurn(turnId)
+
+      if (err instanceof Error && err.name === 'AbortError') {
+        // User stopped / reset the debate — not an error, say nothing.
+        return
       }
+
+      if (err instanceof OpenRouterError && err.status === 503) {
+        // Server proxy not configured (no key). Silently fall back to demo for
+        // the rest of the session; the loop re-fires straight into a demo turn.
+        setServerProxyAvailable(false)
+        onError('Live models unavailable — playing the demo debate instead.')
+        return
+      }
+
+      // Any other live-mode failure (bad model, no credits, network, etc.):
+      // HALT the loop so we don't hammer the API with empty retries, and tell
+      // the director exactly what went wrong and how to recover.
+      pauseDebate()
+      const detail = err instanceof Error ? err.message : 'Unknown error'
+      onError(`⚠️ Debate paused — ${detail}. Try Resume, or hit "← new" to pick a different model.`)
     }
   }, [
     config,
@@ -113,9 +127,11 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     addTurn,
     appendToTurn,
     finishTurn,
+    removeTurn,
     advanceSide,
     startConcluding,
     endDebate,
+    pauseDebate,
     runDemoTurn,
     onError,
   ])
