@@ -1,22 +1,34 @@
-import { Turn } from '../../types'
-import { DebateConfig } from '../../types'
+import { Turn, DebateConfig } from '../../types'
 
 interface DebaterBubbleProps {
   turn: Turn
   config: DebateConfig
+  isNewest?: boolean
 }
 
-export function DebaterBubble({ turn, config }: DebaterBubbleProps) {
+export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
   const isLeft = turn.side === 'left'
   const isVerdict = turn.turnNumber === -1
   const debater = isVerdict ? null : config.debaters[isLeft ? 0 : 1]
+  const color = debater?.model.color ?? '#d97706'
+  const isStreaming = turn.status === 'streaming'
 
   if (isVerdict) {
     return (
-      <div className="my-4 flex justify-center">
-        <div className="max-w-2xl rounded-2xl border border-amber-500/30 bg-amber-950/40 px-6 py-4 text-amber-100 text-sm leading-relaxed">
-          {turn.text}
-          {turn.status === 'streaming' && <Cursor />}
+      <div className="my-6 flex justify-center">
+        <div
+          className="w-full max-w-2xl rounded-2xl border px-6 py-5 text-sm leading-relaxed"
+          style={{
+            borderColor: '#d97706aa',
+            backgroundColor: '#431407cc',
+            boxShadow: '0 0 40px #d9780622',
+          }}
+        >
+          <p className="mb-2 text-xs font-black uppercase tracking-widest text-amber-500">
+            ⚖️ Verdict
+          </p>
+          <p className="text-amber-100">{turn.text}</p>
+          {isStreaming && <Cursor color="#d97706" />}
         </div>
       </div>
     )
@@ -24,37 +36,53 @@ export function DebaterBubble({ turn, config }: DebaterBubbleProps) {
 
   return (
     <div className={`flex w-full gap-3 ${isLeft ? 'flex-row' : 'flex-row-reverse'}`}>
+      {/* Avatar */}
       <div
-        className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl shadow-md"
-        style={{ backgroundColor: debater?.model.color + '33', border: `2px solid ${debater?.model.color}` }}
+        className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg shadow-md transition-all duration-200"
+        style={{
+          backgroundColor: color + '22',
+          border: `2px solid ${isStreaming && isNewest ? color : color + '55'}`,
+          boxShadow: isStreaming && isNewest ? `0 0 12px ${color}44` : 'none',
+        }}
       >
         {debater?.model.emoji}
       </div>
 
-      <div className={`max-w-[72%] ${isLeft ? '' : ''}`}>
+      {/* Bubble content */}
+      <div className={`max-w-[72%] flex flex-col gap-1 ${isLeft ? 'items-start' : 'items-end'}`}>
         <p
-          className={`mb-1 text-xs font-semibold uppercase tracking-wide ${isLeft ? 'text-left' : 'text-right'}`}
-          style={{ color: debater?.model.color }}
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color }}
         >
           {debater?.personaName}
         </p>
         <div
-          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed text-white shadow-md ${
-            isLeft
-              ? 'rounded-tl-sm bg-zinc-800'
-              : 'rounded-tr-sm bg-zinc-700'
-          }`}
+          className="rounded-2xl px-4 py-3 text-sm leading-relaxed text-zinc-100 shadow-md"
+          style={{
+            background: isLeft
+              ? `linear-gradient(135deg, #27272a 0%, #1c1c1f 100%)`
+              : `linear-gradient(225deg, #303034 0%, #1c1c1f 100%)`,
+            borderRadius: isLeft
+              ? '4px 16px 16px 16px'
+              : '16px 4px 16px 16px',
+            borderLeft: isLeft ? `3px solid ${color}44` : undefined,
+            borderRight: !isLeft ? `3px solid ${color}44` : undefined,
+            boxShadow: isStreaming && isNewest ? `0 2px 16px ${color}22` : undefined,
+          }}
         >
           {turn.text}
-          {turn.status === 'streaming' && <Cursor />}
+          {isStreaming && <Cursor color={color} />}
         </div>
       </div>
     </div>
   )
 }
 
-function Cursor() {
+function Cursor({ color }: { color: string }) {
   return (
-    <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse-fast bg-white align-middle opacity-90" />
+    <span
+      className="ml-0.5 inline-block w-0.5 align-middle animate-pulse-fast"
+      style={{ height: '1em', backgroundColor: color, opacity: 0.9 }}
+    />
   )
 }

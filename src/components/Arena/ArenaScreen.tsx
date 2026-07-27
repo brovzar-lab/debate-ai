@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useDebateStore } from '../../store/debateStore'
 import { useTurnEngine } from '../../hooks/useTurnEngine'
 import { DebaterBubble } from './DebaterBubble'
+import { SpeakerHeader } from './SpeakerHeader'
 import { TurnIndicator } from './TurnIndicator'
 import { DirectorControls } from './DirectorControls'
 import { ToastManager } from '../shared/Toast'
@@ -22,7 +23,6 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   const { config, turns, phase, currentSide, turnCount, setDirectorInstruction } = useDebateStore()
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const transcriptRef = useRef<HTMLDivElement>(null)
-  const isRunningRef = useRef(false)
 
   const pushToast = useCallback((message: string) => {
     const id = `toast-${++toastCounter}`
@@ -32,6 +32,7 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   const { runNextTurn, abortCurrentTurn } = useTurnEngine(pushToast)
 
   const isStreaming = turns.some((t) => t.status === 'streaming')
+  const newestTurnId = turns.at(-1)?.id
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -55,6 +56,8 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
 
   const leftDebater = config.debaters[0]
   const rightDebater = config.debaters[1]
+  const leftIsActive = currentSide === 'left'
+  const isDone = phase === 'done'
 
   const handleProvoke = () => {
     if (isDemoMode()) {
@@ -64,7 +67,6 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
         "The director just said: 'You gonna let them talk to you like that?' — respond with more passion and fight back harder."
       )
     }
-    pushToast('🔥 Provocation injected into next turn!')
   }
 
   const handleWrapUp = () => {
@@ -73,24 +75,36 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-white">
-      {/* Header / debater identities */}
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/70 px-6 py-3 shadow-md">
-        <DebaterHeader debater={leftDebater} side="left" />
+      {/* Fighter header — arena staging */}
+      <div className="flex shrink-0 items-center border-b border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-lg">
+        <SpeakerHeader
+          debater={leftDebater}
+          side="left"
+          isActive={leftIsActive && !isDone}
+          isStreaming={isStreaming && leftIsActive}
+          phase={phase}
+        />
 
-        <div className="flex flex-col items-center gap-1 px-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">vs</span>
+        <div className="flex shrink-0 flex-col items-center gap-0.5 px-3">
+          <span className="text-[11px] font-black uppercase tracking-widest text-zinc-600">vs</span>
           <button
             onClick={() => {
               abortCurrentTurn()
               onReset()
             }}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="text-[10px] text-zinc-700 hover:text-zinc-400 transition-colors whitespace-nowrap"
           >
-            ← New debate
+            ← new
           </button>
         </div>
 
-        <DebaterHeader debater={rightDebater} side="right" />
+        <SpeakerHeader
+          debater={rightDebater}
+          side="right"
+          isActive={!leftIsActive && !isDone}
+          isStreaming={isStreaming && !leftIsActive}
+          phase={phase}
+        />
       </div>
 
       {/* Transcript */}
@@ -99,21 +113,26 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
         className="flex-1 overflow-y-auto px-4 py-6 md:px-8"
         style={{ scrollBehavior: 'smooth' }}
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-5">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {/* Topic banner */}
-          <div className="rounded-xl bg-zinc-800/50 py-3 px-5 text-center text-sm italic text-zinc-400">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 px-5 text-center text-sm italic text-zinc-500">
             "{config.topic}"
           </div>
 
           {turns.map((turn) => (
-            <DebaterBubble key={turn.id} turn={turn} config={config} />
+            <DebaterBubble
+              key={turn.id}
+              turn={turn}
+              config={config}
+              isNewest={turn.id === newestTurnId}
+            />
           ))}
         </div>
       </div>
 
       {/* Turn indicator + director controls */}
       <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/90 px-4 py-3 shadow-lg">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2.5">
           <TurnIndicator
             currentSide={currentSide}
             config={config}
@@ -131,33 +150,6 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
       </div>
 
       <ToastManager toasts={toasts} onDismiss={(id) => setToasts((p) => p.filter((t) => t.id !== id))} />
-    </div>
-  )
-}
-
-interface DebaterHeaderProps {
-  debater: { model: { color: string; emoji: string }; personaName: string; stance: string }
-  side: 'left' | 'right'
-}
-
-function DebaterHeader({ debater, side }: DebaterHeaderProps) {
-  const isRight = side === 'right'
-  return (
-    <div className={`flex items-center gap-3 ${isRight ? 'flex-row-reverse text-right' : ''}`}>
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl"
-        style={{ backgroundColor: debater.model.color + '22', border: `2px solid ${debater.model.color}` }}
-      >
-        {debater.model.emoji}
-      </div>
-      <div>
-        <p className="font-bold text-sm" style={{ color: debater.model.color }}>
-          {debater.personaName}
-        </p>
-        <p className="text-xs text-zinc-500 max-w-[160px] leading-tight truncate" title={debater.stance}>
-          {debater.stance}
-        </p>
-      </div>
     </div>
   )
 }

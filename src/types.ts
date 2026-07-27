@@ -48,3 +48,9 @@ export interface DirectorAction {
   type: 'provoke' | 'wrap_up' | 'set_intensity' | 'stop' | 'resume'
   payload?: number | string
 }
+
+// Shared interface for APPU-1423 voice integration — Web II binds to this
+export interface VoiceSpeakerState {
+  activeSide: Side | null
+  isSpeaking: boolean
+}
