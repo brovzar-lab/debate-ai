@@ -3,12 +3,15 @@ import { Model, DebateConfig, Debater } from '../../types'
 import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
+import { FormatSelector } from './FormatSelector'
 import { isDemoMode, getOpenRouterKey, setOpenRouterKey, clearOpenRouterKey } from '../../lib/demo'
 import { DEFAULT_VOICE_IDS } from '../../lib/tts'
 import { useAvailableModels } from '../../hooks/useAvailableModels'
+import { DEFAULT_FORMAT_ID, DebateFormatId } from '../../data/debateFormats'
 import {
   DEMO_TOPIC,
   DEMO_DEBATERS,
+  DEMO_FORMAT_ID,
 } from '../../data/demoScript'
 
 interface SetupScreenProps {
@@ -42,6 +45,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [rightStance, setRightStance] = useState(demo ? DEMO_DEBATERS.right.stance : '')
   const [leftVoiceId, setLeftVoiceId] = useState<string>(DEFAULT_VOICE_IDS.left)
   const [rightVoiceId, setRightVoiceId] = useState<string>(DEFAULT_VOICE_IDS.right)
+  const [selectedFormat, setSelectedFormat] = useState<DebateFormatId>(demo ? DEMO_FORMAT_ID : DEFAULT_FORMAT_ID)
   const [turnCap, setTurnCap] = useState(5)
   const [apiKey, setApiKey] = useState(getOpenRouterKey() ?? '')
   const [showSettings, setShowSettings] = useState(false)
@@ -83,6 +87,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       debaters: [leftDebater, rightDebater],
       intensity: 2,
       turnCap,
+      format: selectedFormat,
     })
   }
 
@@ -144,6 +149,9 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             className="w-full rounded-xl bg-zinc-800 px-4 py-3 text-base text-white placeholder-zinc-600 outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
           />
         </div>
+
+        {/* Format selector */}
+        <FormatSelector value={selectedFormat} onChange={setSelectedFormat} />
 
         {/* Podiums */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

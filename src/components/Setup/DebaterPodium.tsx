@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Model, Side } from '../../types'
 import { MODELS } from '../../data/models'
-import { AVAILABLE_VOICES, DEFAULT_VOICE_IDS } from '../../lib/tts'
+import { AVAILABLE_VOICES, DEFAULT_VOICE_IDS, synthesizeSentence } from '../../lib/tts'
+
+const PREVIEW_LINE = "Let the debate begin — I stand ready to make my case."
 
 interface DebaterPodiumProps {
   side: Side
@@ -27,8 +29,9 @@ export function DebaterPodium({
   onVoiceChange,
 }: DebaterPodiumProps) {
   const [dragOver, setDragOver] = useState(false)
-  const [showVoice, setShowVoice] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const isLeft = side === 'left'
+  const defaultVoiceId = DEFAULT_VOICE_IDS[side]
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
@@ -38,8 +41,20 @@ export function DebaterPodium({
     if (found) onModelDrop(found)
   }
 
-  const defaultVoiceId = DEFAULT_VOICE_IDS[side]
-  const isCustomVoice = voiceId !== defaultVoiceId
+  const handlePreview = async () => {
+    if (previewing) return
+    setPreviewing(true)
+    try {
+      const url = await synthesizeSentence(PREVIEW_LINE, voiceId, 2)
+      const audio = new Audio(url)
+      audio.addEventListener('ended', () => URL.revokeObjectURL(url))
+      audio.play().catch(() => URL.revokeObjectURL(url))
+    } catch {
+      // preview is best-effort; real debates are unaffected
+    } finally {
+      setPreviewing(false)
+    }
+  }
 
   return (
     <div
@@ -97,29 +112,31 @@ export function DebaterPodium({
             className="w-full rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:ring-1 focus:ring-zinc-600"
           />
 
-          {/* Voice selector — collapsed by default */}
-          <button
-            type="button"
-            onClick={() => setShowVoice((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors w-fit"
-          >
-            <span>{showVoice ? '▾' : '▸'}</span>
-            <span>Voice{isCustomVoice ? ' ✦' : ''}</span>
-          </button>
-
-          {showVoice && (
-            <select
-              value={voiceId}
-              onChange={(e) => onVoiceChange(e.target.value)}
-              className="w-full rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-zinc-600"
-            >
-              {AVAILABLE_VOICES.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.label}{v.id === defaultVoiceId ? ' (default)' : ''}
-                </option>
-              ))}
-            </select>
-          )}
+          {/* Voice picker — always visible */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-zinc-400">Voice</label>
+            <div className="flex gap-2">
+              <select
+                value={voiceId}
+                onChange={(e) => onVoiceChange(e.target.value)}
+                className="flex-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-zinc-600"
+              >
+                {AVAILABLE_VOICES.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}{v.id === defaultVoiceId ? ' (default)' : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handlePreview}
+                disabled={previewing}
+                className="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {previewing ? '…' : '▶ Preview'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

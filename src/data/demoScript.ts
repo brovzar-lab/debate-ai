@@ -1,7 +1,11 @@
+import type { DebateFormatId } from './debateFormats'
+
 export interface DemoTurn {
   side: 'left' | 'right'
   text: string
 }
+
+export const DEMO_FORMAT_ID: DebateFormatId = 'dialectic'
 
 export const DEMO_TOPIC = 'AI will make human creativity obsolete within a decade'
 
