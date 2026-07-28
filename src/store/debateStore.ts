@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { DebateConfig, DebateState, Side, TurnStatus } from '../types'
-import { DEBATE_FORMATS, DebateFormat, DEFAULT_FORMAT_ID, selectTurnLengthTarget } from '../data/debateFormats'
+import { DebateConfig, DebateState, Side, Turn, TurnRole, TurnStatus } from '../types'
+import { DEBATE_FORMATS, DebateFormat, DEFAULT_FORMAT_ID, selectTurnLengthTarget, BRAINSTORM_CRAFT_CRITERIA } from '../data/debateFormats'
 
 interface DebateStore extends DebateState {
   startDebate: (config: DebateConfig) => void
@@ -9,13 +9,15 @@ interface DebateStore extends DebateState {
   endDebate: () => void
   startConcluding: () => void
   resetDebate: () => void
-  addTurn: (side: Side, turnNumber: number) => string
+  addTurn: (side: Side, turnNumber: number, role?: TurnRole) => string
   appendToTurn: (id: string, chunk: string) => void
   finishTurn: (id: string) => void
   removeTurn: (id: string) => void
   setIntensity: (level: number) => void
   setDirectorInstruction: (instruction: string | null) => void
   advanceSide: () => void
+  markLeadSteerFired: () => void
+  markLeadSynthesisFired: () => void
 }
 
 const initialState: DebateState = {
@@ -26,6 +28,8 @@ const initialState: DebateState = {
   pendingDirectorInstruction: null,
   currentSide: 'left',
   turnCount: 0,
+  leadSteerFired: false,
+  leadSynthesisFired: false,
 }
 
 let turnIdCounter = 0
@@ -42,6 +46,8 @@ export const useDebateStore = create<DebateStore>((set, get) => ({
       pendingDirectorInstruction: null,
       currentSide: 'left',
       turnCount: 0,
+      leadSteerFired: false,
+      leadSynthesisFired: false,
     }),
 
   pauseDebate: () => set({ phase: 'paused' }),
@@ -57,10 +63,10 @@ export const useDebateStore = create<DebateStore>((set, get) => ({
 
   resetDebate: () => set(initialState),
 
-  addTurn: (side, turnNumber) => {
+  addTurn: (side, turnNumber, role) => {
     const id = `turn-${++turnIdCounter}`
     set((state) => ({
-      turns: [...state.turns, { id, side, text: '', status: 'streaming' as TurnStatus, turnNumber }],
+      turns: [...state.turns, { id, side, text: '', status: 'streaming' as TurnStatus, turnNumber, role } as Turn],
     }))
     return id
   },
@@ -90,6 +96,9 @@ export const useDebateStore = create<DebateStore>((set, get) => ({
       turnCount: state.turnCount + 1,
       pendingDirectorInstruction: null,
     })),
+
+  markLeadSteerFired: () => set({ leadSteerFired: true }),
+  markLeadSynthesisFired: () => set({ leadSynthesisFired: true }),
 }))
 
 export function buildClosingInstruction(format: DebateFormat): string {
@@ -98,6 +107,11 @@ export function buildClosingInstruction(format: DebateFormat): string {
   }
   if (format.ending === 'synthesis') {
     return "Give your closing synthesis. Acknowledge what the other side got right. Articulate the shared understanding you've both arrived at. Reason toward a joint conclusion."
+  }
+  if (format.ending === 'best-idea') {
+    // Brainstorm closing is the lead synthesis, not a per-debater statement.
+    // This path is a safety net only — the turn engine short-circuits to the lead layer first.
+    return 'Briefly name the one idea from this session you believe in most. One sentence.'
   }
   // open ending
   if (format.id === 'discussion') {
@@ -121,7 +135,7 @@ export function buildSystemPrompt(
   const debater = config.debaters[side === 'left' ? 0 : 1]
   const format = DEBATE_FORMATS[config.format ?? DEFAULT_FORMAT_ID]
 
-  const intensityDescriptions: Record<number, string> = {
+  const adversarialIntensityDescriptions: Record<number, string> = {
     1: 'calm and measured, making thoughtful logical arguments',
     2: 'confident and assertive, pressing your points firmly',
     3: 'passionate and forceful, speaking with conviction and edge',
@@ -129,7 +143,17 @@ export function buildSystemPrompt(
     5: 'savage and relentless, demolishing every argument with brutal rhetorical force',
   }
 
-  const intensityText = intensityDescriptions[intensity] ?? intensityDescriptions[3]
+  const brainstormIntensityDescriptions: Record<number, string> = {
+    1: 'purely generative — yes-and everything without filtering',
+    2: 'mostly generative — build freely but note when something feels weak',
+    3: 'balanced — develop strong threads; gently cut ideas without real legs',
+    4: 'editorial — push hard to strengthen weak ideas or drop them fast',
+    5: 'ruthlessly selective — cut mediocre ideas immediately, champion only the genuinely strong',
+  }
+
+  const isBrainstorm = format.id === 'brainstorm'
+  const intensityMap = isBrainstorm ? brainstormIntensityDescriptions : adversarialIntensityDescriptions
+  const intensityText = intensityMap[intensity] ?? intensityMap[3]
   const lengthTarget = selectTurnLengthTarget(format, intensity, turnIndex)
 
   const formatPersona: Record<string, string> = {
@@ -138,25 +162,35 @@ export function buildSystemPrompt(
     dialectic: "You hold the thesis position, but you're working toward a shared synthesis with your counterpart. Engage their antithesis seriously. Reason with rigor.",
     heated: "This is a real argument — emotional, raw. You're not trying to win on points; you're reacting. Short, sharp, personal.",
     socratic: 'Your primary tool is questions. Use them to expose assumptions, press on contradictions, or clarify claims. Answer questions directed at you concisely, then pivot back to probing.',
-    oxford: 'You are speaking at a formal Oxford-style debate. Maintain parliamentary register. Address your opponent\'s case formally and build your own case with structured argumentation.',
+    oxford: "You are speaking at a formal Oxford-style debate. Maintain parliamentary register. Address your opponent's case formally and build your own case with structured argumentation.",
+    brainstorm: "You are a creative collaborator, not an adversary. Your goal: find the BEST IDEA. Default to YES, AND — accept what your partner offers and build on it, extend it, make it wilder or more precise. Push back ONLY when you genuinely believe a specific assumption is weakening the idea. Fight for ideas you believe in. The Fire dial controls how hard you cut weak ideas.",
   }
 
-  let prompt = `You are ${debater.personaName}, debating the topic: "${config.topic}".
-Your position: ${debater.stance}.
+  let prompt = `You are ${debater.personaName}, in a brainstorm session about: "${config.topic}".
+Your role: ${debater.stance}.
 Speak in first person. Be ${intensityText}.
 ${formatPersona[format.id] ?? formatPersona.classic}
-Respond in exactly ${lengthTarget}. No headers. No bullet points. Pure rhetoric.`
+Respond in exactly ${lengthTarget}. No headers. No bullet points. Pure creative thought.`
+
+  if (isBrainstorm) {
+    const subject = config.subject ?? 'general'
+    const criteria = BRAINSTORM_CRAFT_CRITERIA[subject]
+    prompt += `\n\nCRAFT CRITERIA FOR ${subject.toUpperCase()}:\n${criteria}`
+  }
 
   if (lastOpponentText) {
     if (format.framing === 'collaborative') {
-      prompt += `\n\nYour fellow thinker just said:\n"${lastOpponentText}"\n\nBuild on or push back on their perspective.`
+      const opener = isBrainstorm ? 'Your creative partner just said' : 'Your fellow thinker just said'
+      prompt += `\n\n${opener}:\n"${lastOpponentText}"\n\nBuild on or push back on their perspective.`
     } else if (format.framing === 'questioner') {
       prompt += `\n\nThey just said:\n"${lastOpponentText}"\n\nProbe their assumptions with questions, or answer their probe directly.`
     } else {
       prompt += `\n\nYour opponent just said:\n"${lastOpponentText}"\n\nRespond directly to their argument.`
     }
   } else {
-    if (format.framing === 'collaborative') {
+    if (isBrainstorm) {
+      prompt += '\n\nShare your opening idea. A bold first thought is better than a cautious one.'
+    } else if (format.framing === 'collaborative') {
       prompt += '\n\nShare your opening perspective.'
     } else if (format.framing === 'questioner') {
       prompt += '\n\nBegin by probing the core assumption of the topic with a question.'
@@ -170,4 +204,58 @@ Respond in exactly ${lengthTarget}. No headers. No bullet points. Pure rhetoric.
   }
 
   return prompt
+}
+
+export function buildLeadSteerPrompt(config: DebateConfig, turns: Turn[]): string {
+  const subject = config.subject ?? 'general'
+  const criteria = BRAINSTORM_CRAFT_CRITERIA[subject]
+  const leftName = config.debaters[0].personaName
+  const rightName = config.debaters[1].personaName
+
+  const sessionText = turns
+    .filter((t) => t.status === 'done' && t.role !== 'lead')
+    .map((t) => `${t.side === 'left' ? leftName : rightName}: ${t.text}`)
+    .join('\n\n')
+
+  return `You are the creative lead on this brainstorm session about: "${config.topic}".
+
+SESSION SO FAR:
+${sessionText}
+
+CRAFT CRITERIA FOR ${subject.toUpperCase()}:
+${criteria}
+
+Your task: In 2–3 concise sentences, name the single strongest idea thread emerging in this session and explain exactly WHY it has the most potential according to the craft criteria above. Then direct ${leftName} and ${rightName} to develop THIS specific thread further in their next exchange. Speak as "Lead" — incisive and encouraging. No filler.`
+}
+
+export function buildLeadSynthesisPrompt(config: DebateConfig, turns: Turn[]): string {
+  const subject = config.subject ?? 'general'
+  const criteria = BRAINSTORM_CRAFT_CRITERIA[subject]
+  const leftName = config.debaters[0].personaName
+  const rightName = config.debaters[1].personaName
+
+  const sessionText = turns
+    .filter((t) => t.status === 'done' && t.role !== 'lead')
+    .map((t) => `${t.side === 'left' ? leftName : rightName}: ${t.text}`)
+    .join('\n\n')
+
+  return `You are the creative lead synthesizing this brainstorm session about: "${config.topic}".
+
+FULL SESSION:
+${sessionText}
+
+CRAFT CRITERIA FOR ${subject.toUpperCase()}:
+${criteria}
+
+Your task: Crown the single BEST IDEA from this session. Write your synthesis in exactly this format:
+
+🏆 BEST IDEA: [The strongest idea in one punchy sentence]
+
+WHY IT WINS: [2–3 sentences grounding it in the specific craft criteria above — be precise, not generic]
+
+RUNNER-UP SHORTLIST:
+• [Second-best idea] — [one sentence on its specific merit]
+• [Third-best idea] — [one sentence on its specific merit]
+
+Be decisive. The best idea should feel surprising but inevitable in hindsight. Ground your reasoning in the craft criteria, not just enthusiasm.`
 }

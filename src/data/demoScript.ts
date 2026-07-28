@@ -1,30 +1,76 @@
-import type { DebateFormatId } from './debateFormats'
+import type { DebateFormatId, BrainstormSubject } from './debateFormats'
 
 export interface DemoTurn {
   side: 'left' | 'right'
   text: string
 }
 
-export const DEMO_FORMAT_ID: DebateFormatId = 'dialectic'
+// Default demo experience: brainstorm showcasing the new lead layer + Best-Idea reveal.
+export const DEMO_FORMAT_ID: DebateFormatId = 'brainstorm'
+export const DEMO_BRAINSTORM_SUBJECT: BrainstormSubject = 'film'
 
-export const DEMO_TOPIC = 'AI will make human creativity obsolete within a decade'
+export const DEMO_TOPIC = "What's the best film concept involving artificial memory?"
 
 export const DEMO_DEBATERS = {
   left: {
-    personaName: 'ARIA-X',
-    stance: 'AI will absolutely replace human creativity — resistance is futile',
+    personaName: 'SPARK',
+    stance: 'Yes-and — every idea is the seed of the best idea',
     modelName: 'GPT-4o',
     color: '#10a37f',
-    emoji: '🤖',
+    emoji: '✨',
   },
   right: {
-    personaName: 'Professor Kai',
-    stance: 'Human creativity is irreplaceable — AI is just a sophisticated calculator',
+    personaName: 'NOVA',
+    stance: 'Build, push, elevate — find what the idea really wants to be',
     modelName: 'Claude 3.5 Sonnet',
-    color: '#d97706',
-    emoji: '🧠',
+    color: '#8b5cf6',
+    emoji: '💡',
   },
 }
+
+// Brainstorm demo script — collaborative yes-and on a film concept about artificial memory.
+export const DEMO_BRAINSTORM_SCRIPT: DemoTurn[] = [
+  {
+    side: 'left',
+    text: "What if someone could delete specific memories — not just suppress them, but surgically remove them? The technology exists, marketed as a grief cure. But the story is: what if the memory you deleted was the only thing that made you... you? The protagonist deletes what they think is trauma and slowly discovers their entire personality was built around it.",
+  },
+  {
+    side: 'right',
+    text: "Yes! And here's what I'd add: the company doing the deletions isn't just a medical service — they're harvesting the removed memories as content. Other people are literally experiencing your deleted past as entertainment. So the protagonist starts noticing strangers who know things about them they never shared. Their deleted grief has become someone else's favorite movie.",
+  },
+  {
+    side: 'left',
+    text: "The harvesting angle is gold. Building on it — what if the protagonist is a memory editor at this company? They spend their days deleting other people's grief but have been subconsciously protecting one memory of their own. We don't know what it is. The audience doesn't know. Even they don't know. Every work decision they make seems designed to avoid ever reviewing that one file.",
+  },
+  {
+    side: 'right',
+    text: "The unreliable narrator who doesn't know they're unreliable. Let me push the emotional core: the memory they're protecting is of a relationship that ended badly. Not beautifully. They've been editing it in their head — making it better than it was. So when they finally access the raw file, the truth is devastating: the person they've been mourning never existed the way they remember them.",
+  },
+  {
+    side: 'left',
+    text: "Mutual corruption. What if the person they've been protecting the memory of is ALSO a memory editor? And they've been editing their own memory of the protagonist too? Two people, two corrupted versions of the same relationship. The film becomes: which version of love is more real — the edited one you chose to keep, or the raw one that hurt?",
+  },
+  {
+    side: 'right',
+    text: "That's a film I'd see three times. For structure: we see their relationship twice. First pass: the protagonist's edited version — warm, golden-hour cinematography, the love story they've been living in their head. Second pass: the other person's edited version, subtly different. Third pass: what actually happened, which neither of them has ever seen. The audience holds the truth before either character does.",
+  },
+]
+
+// Lead mid-point steer (fires after half the brainstorm turns are done)
+export const DEMO_BRAINSTORM_MID_STEER =
+  "The strongest thread here is the dual-corruption angle — two people editing the same shared memory independently, creating two incompatible versions of the same love story. This hits the film premise criteria hard: a fresh 'what if' with an immediately felt emotional core (what is a relationship if both people have rewritten it?). SPARK, NOVA — push deeper on the structural reveal. How does the protagonist find out the OTHER person has been editing too? That discovery moment is the heart of the film."
+
+// Lead final synthesis (Best Idea reveal)
+export const DEMO_BRAINSTORM_BEST_IDEA =
+  `🏆 BEST IDEA: A memory editor discovers that the person whose deleted grief they've been archiving is editing their own memory of the same relationship — and both versions are wrong.
+
+WHY IT WINS: This premise scores on every film craft criterion. The 'what if' is fresh and immediately understood — memory as a shared, corruptible artifact hits harder than memory as a private thing. The want vs. need is razor-sharp: the protagonist wants the clean version of the love story, but needs to confront what actually happened. And the structural reveal (the audience holding the truth before either character does) generates sustained dramatic irony that can power a full feature.
+
+RUNNER-UP SHORTLIST:
+• The protagonist-as-editor who unknowingly protects their own file — a compelling setup, but needs the dual-corruption element to reach its full potential as outlined above.
+• The harvested-memories-as-entertainment angle — a rich satirical layer that works best as the world-building backdrop rather than the central conflict.`
+
+// ─── Legacy adversarial demo content (used when other formats are selected in demo mode) ───
 
 export const DEMO_SCRIPT: DemoTurn[] = [
   {

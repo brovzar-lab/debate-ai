@@ -1,5 +1,5 @@
-import type { DebateFormatId } from './data/debateFormats'
-export type { DebateFormatId }
+import type { DebateFormatId, BrainstormSubject } from './data/debateFormats'
+export type { DebateFormatId, BrainstormSubject }
 
 export interface Model {
   id: string
@@ -27,9 +27,11 @@ export interface DebateConfig {
   intensity: number
   turnCap: number
   format: DebateFormatId
+  subject?: BrainstormSubject
 }
 
 export type TurnStatus = 'streaming' | 'done'
+export type TurnRole = 'debater' | 'lead'
 
 export interface Turn {
   id: string
@@ -37,6 +39,7 @@ export interface Turn {
   text: string
   status: TurnStatus
   turnNumber: number
+  role?: TurnRole
 }
 
 export interface DebateState {
@@ -47,6 +50,8 @@ export interface DebateState {
   pendingDirectorInstruction: string | null
   currentSide: Side
   turnCount: number
+  leadSteerFired: boolean
+  leadSynthesisFired: boolean
 }
 
 export interface DirectorAction {

@@ -149,4 +149,62 @@ describe('buildClosingInstruction', () => {
     const instruction = buildClosingInstruction(DEBATE_FORMATS.socratic)
     expect(instruction).toContain('refined')
   })
+
+  it('brainstorm produces a brief idea-naming instruction (safety net path)', () => {
+    const instruction = buildClosingInstruction(DEBATE_FORMATS.brainstorm)
+    expect(instruction).toBeTruthy()
+    // Should not reference closing statement or wins — this is a yes-and session
+    expect(instruction).not.toContain('wins')
+    expect(instruction).not.toContain('closing statement')
+  })
+})
+
+describe('buildSystemPrompt (brainstorm format)', () => {
+  const brainstormConfig: DebateConfig = {
+    topic: 'Best film concept about artificial memory',
+    debaters: [
+      { side: 'left', model: leftModel, personaName: 'SPARK', stance: 'Yes-and everything' },
+      { side: 'right', model: rightModel, personaName: 'NOVA', stance: 'Build and elevate' },
+    ],
+    intensity: 2,
+    turnCap: 5,
+    format: 'brainstorm',
+    subject: 'film',
+  }
+
+  it('uses yes-and collaborative framing', () => {
+    const prompt = buildSystemPrompt(brainstormConfig, 'left', 2, null, null)
+    expect(prompt).toContain('YES, AND')
+  })
+
+  it('injects film craft criteria', () => {
+    const prompt = buildSystemPrompt(brainstormConfig, 'left', 2, null, null)
+    expect(prompt).toContain('CRAFT CRITERIA FOR FILM')
+    expect(prompt).toContain('Premise')
+  })
+
+  it('injects general criteria when no subject provided', () => {
+    const noSubjectConfig: DebateConfig = { ...brainstormConfig, subject: undefined }
+    const prompt = buildSystemPrompt(noSubjectConfig, 'left', 2, null, null)
+    expect(prompt).toContain('CRAFT CRITERIA FOR GENERAL')
+  })
+
+  it('uses collaborative opener for first turn', () => {
+    const prompt = buildSystemPrompt(brainstormConfig, 'left', 2, null, null)
+    expect(prompt).toContain('opening idea')
+  })
+
+  it('uses creative-partner framing for opponent text', () => {
+    const prompt = buildSystemPrompt(brainstormConfig, 'right', 2, null, 'Some idea here.')
+    expect(prompt).toContain('creative partner')
+    expect(prompt).not.toContain('Your opponent just said')
+  })
+
+  it('uses brainstorm-appropriate intensity descriptions', () => {
+    const prompt1 = buildSystemPrompt(brainstormConfig, 'left', 1, null, null)
+    expect(prompt1).toContain('yes-and everything')
+
+    const prompt5 = buildSystemPrompt(brainstormConfig, 'left', 5, null, null)
+    expect(prompt5).toContain('ruthlessly selective')
+  })
 })

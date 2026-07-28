@@ -1,5 +1,11 @@
 import { useCallback, useRef } from 'react'
-import { useDebateStore, buildSystemPrompt, buildClosingInstruction } from '../store/debateStore'
+import {
+  useDebateStore,
+  buildSystemPrompt,
+  buildClosingInstruction,
+  buildLeadSteerPrompt,
+  buildLeadSynthesisPrompt,
+} from '../store/debateStore'
 import { streamCompletion, OpenRouterError } from '../lib/openRouter'
 import { isDemoMode, setServerProxyAvailable } from '../lib/demo'
 import { useDemoEngine } from './useDemoEngine'
@@ -12,7 +18,7 @@ interface UseTurnEngineReturn {
 
 export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineReturn {
   const abortRef = useRef<AbortController | null>(null)
-  const runDemoTurn = useDemoEngine()
+  const { runDemoTurn, runDemoLeadTurn } = useDemoEngine()
 
   const {
     config,
@@ -22,6 +28,8 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     pendingDirectorInstruction,
     currentSide,
     turnCount,
+    leadSteerFired,
+    leadSynthesisFired,
     addTurn,
     appendToTurn,
     finishTurn,
@@ -30,6 +38,8 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     startConcluding,
     endDebate,
     pauseDebate,
+    markLeadSteerFired,
+    markLeadSynthesisFired,
   } = useDebateStore()
 
   const abortCurrentTurn = useCallback(() => {
@@ -39,18 +49,100 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
   const runNextTurn = useCallback(async () => {
     if (!config || (phase !== 'debating' && phase !== 'concluding')) return
 
+    const format = DEBATE_FORMATS[config.format ?? DEFAULT_FORMAT_ID]
+
+    // ── Brainstorm concluding: lead synthesis instead of debater closing statements ──
+    if (format.id === 'brainstorm' && phase === 'concluding') {
+      if (leadSynthesisFired) {
+        endDebate()
+        return
+      }
+
+      if (isDemoMode()) {
+        await runDemoLeadTurn('best-idea')
+        markLeadSynthesisFired()
+        endDebate()
+        return
+      }
+
+      const synthesisPrompt = buildLeadSynthesisPrompt(config, turns)
+      const turnId = addTurn('left', -1, 'lead')
+      abortRef.current = new AbortController()
+
+      try {
+        for await (const chunk of streamCompletion(
+          config.debaters[0].model.openrouterId,
+          synthesisPrompt,
+          abortRef.current.signal
+        )) {
+          appendToTurn(turnId, chunk)
+        }
+        finishTurn(turnId)
+        markLeadSynthesisFired()
+        endDebate()
+      } catch (err) {
+        removeTurn(turnId)
+        if (err instanceof Error && err.name === 'AbortError') return
+        if (err instanceof OpenRouterError && err.status === 503) {
+          setServerProxyAvailable(false)
+          onError('Live models unavailable — playing the demo debate instead.')
+          return
+        }
+        pauseDebate()
+        const detail = err instanceof Error ? err.message : 'Unknown error'
+        onError(`⚠️ Debate paused — ${detail}. Try Resume, or hit "← new" to pick a different model.`)
+      }
+      return
+    }
+
     // Check turn cap
     if (phase === 'debating' && turnCount >= config.turnCap * 2) {
       startConcluding()
       return
     }
 
+    // ── Brainstorm mid-point steer ──
+    if (format.id === 'brainstorm' && !leadSteerFired && turnCount >= config.turnCap) {
+      if (isDemoMode()) {
+        await runDemoLeadTurn('steer')
+        markLeadSteerFired()
+        return
+      }
+
+      const steerPrompt = buildLeadSteerPrompt(config, turns)
+      const steerTurnId = addTurn('left', turnCount, 'lead')
+      abortRef.current = new AbortController()
+
+      try {
+        for await (const chunk of streamCompletion(
+          config.debaters[0].model.openrouterId,
+          steerPrompt,
+          abortRef.current.signal
+        )) {
+          appendToTurn(steerTurnId, chunk)
+        }
+        finishTurn(steerTurnId)
+        markLeadSteerFired()
+      } catch (err) {
+        removeTurn(steerTurnId)
+        if (err instanceof Error && err.name === 'AbortError') return
+        if (err instanceof OpenRouterError && err.status === 503) {
+          setServerProxyAvailable(false)
+          onError('Live models unavailable — playing the demo debate instead.')
+          return
+        }
+        pauseDebate()
+        const detail = err instanceof Error ? err.message : 'Unknown error'
+        onError(`⚠️ Debate paused — ${detail}. Try Resume, or hit "← new" to pick a different model.`)
+      }
+      return
+    }
+
     const lastOpponentTurn = turns
-      .filter((t) => t.status === 'done' && t.side !== currentSide)
+      .filter((t) => t.status === 'done' && t.side !== currentSide && t.role !== 'lead')
       .at(-1)
 
     const isClosingStatement = phase === 'concluding'
-    const format = DEBATE_FORMATS[config.format ?? DEFAULT_FORMAT_ID]
 
     const directorInstruction = isClosingStatement
       ? buildClosingInstruction(format)
@@ -96,25 +188,16 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
         endDebate()
       }
     } catch (err) {
-      // Drop the empty bubble this failed turn created so it doesn't linger.
       removeTurn(turnId)
 
-      if (err instanceof Error && err.name === 'AbortError') {
-        // User stopped / reset the debate — not an error, say nothing.
-        return
-      }
+      if (err instanceof Error && err.name === 'AbortError') return
 
       if (err instanceof OpenRouterError && err.status === 503) {
-        // Server proxy not configured (no key). Silently fall back to demo for
-        // the rest of the session; the loop re-fires straight into a demo turn.
         setServerProxyAvailable(false)
         onError('Live models unavailable — playing the demo debate instead.')
         return
       }
 
-      // Any other live-mode failure (bad model, no credits, network, etc.):
-      // HALT the loop so we don't hammer the API with empty retries, and tell
-      // the director exactly what went wrong and how to recover.
       pauseDebate()
       const detail = err instanceof Error ? err.message : 'Unknown error'
       onError(`⚠️ Debate paused — ${detail}. Try Resume, or hit "← new" to pick a different model.`)
@@ -127,6 +210,8 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     pendingDirectorInstruction,
     currentSide,
     turnCount,
+    leadSteerFired,
+    leadSynthesisFired,
     addTurn,
     appendToTurn,
     finishTurn,
@@ -135,7 +220,10 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
     startConcluding,
     endDebate,
     pauseDebate,
+    markLeadSteerFired,
+    markLeadSynthesisFired,
     runDemoTurn,
+    runDemoLeadTurn,
     onError,
   ])
 

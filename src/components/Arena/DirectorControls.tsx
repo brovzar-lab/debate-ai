@@ -14,8 +14,9 @@ interface InjectedFeedback {
 }
 
 export function DirectorControls({ onProvoke, onWrapUp, isStreaming }: DirectorControlsProps) {
-  const { phase, intensity, setIntensity, pauseDebate, resumeDebate, startConcluding } =
+  const { phase, intensity, setIntensity, pauseDebate, resumeDebate, startConcluding, config } =
     useDebateStore()
+  const isBrainstorm = config?.format === 'brainstorm'
   const [injected, setInjected] = useState<InjectedFeedback | null>(null)
   const feedbackKey = injected?.key ?? 0
 
@@ -60,7 +61,7 @@ export function DirectorControls({ onProvoke, onWrapUp, isStreaming }: DirectorC
     return (
       <div className="flex justify-center">
         <span className="rounded-full bg-violet-900/40 border border-violet-700/40 px-5 py-2 text-sm font-bold text-violet-300 animate-pulse">
-          🏁 Final statements…
+          {isBrainstorm ? '✨ Finding the Best Idea…' : '🏁 Final statements…'}
         </span>
       </div>
     )
@@ -114,13 +115,13 @@ export function DirectorControls({ onProvoke, onWrapUp, isStreaming }: DirectorC
             😤 Provoke
           </button>
 
-          {/* Wrap it up */}
+          {/* Wrap it up / Best Idea */}
           <button
             onClick={handleWrapUp}
             disabled={isStreaming}
             className="flex items-center gap-1.5 rounded-xl bg-violet-600/90 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-violet-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 shadow-md shadow-violet-950/50"
           >
-            🏁 Wrap Up
+            {isBrainstorm ? '✨ Best Idea' : '🏁 Wrap Up'}
           </button>
         </div>
       </div>

@@ -8,10 +8,33 @@ interface DebaterBubbleProps {
 
 export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
   const isLeft = turn.side === 'left'
-  const isVerdict = turn.turnNumber === -1
-  const debater = isVerdict ? null : config.debaters[isLeft ? 0 : 1]
+  const isVerdict = turn.turnNumber === -1 && turn.role !== 'lead'
+  const isLead = turn.role === 'lead'
+  const debater = (isVerdict || isLead) ? null : config.debaters[isLeft ? 0 : 1]
   const color = debater?.model.color ?? '#d97706'
   const isStreaming = turn.status === 'streaming'
+
+  if (isLead) {
+    const isBestIdea = turn.turnNumber === -1
+    return (
+      <div className="my-4 flex justify-center">
+        <div
+          className="w-full max-w-2xl rounded-2xl border px-6 py-5 text-sm leading-relaxed"
+          style={{
+            borderColor: '#f59e0b88',
+            backgroundColor: '#1c1a1699',
+            boxShadow: '0 0 48px #f59e0b18',
+          }}
+        >
+          <p className="mb-2 text-xs font-black uppercase tracking-widest text-amber-400">
+            {isBestIdea ? '💡 Best Idea' : '💡 Lead'}
+          </p>
+          <p className="whitespace-pre-line text-amber-50">{turn.text}</p>
+          {isStreaming && <Cursor color="#f59e0b" />}
+        </div>
+      </div>
+    )
+  }
 
   if (isVerdict) {
     return (

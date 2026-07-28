@@ -23,6 +23,8 @@ beforeEach(() => {
     pendingDirectorInstruction: null,
     currentSide: 'left',
     turnCount: 0,
+    leadSteerFired: false,
+    leadSynthesisFired: false,
   })
 })
 
@@ -108,12 +110,31 @@ describe('debate store', () => {
   it('resets to initial state', () => {
     useDebateStore.getState().startDebate(mockConfig)
     useDebateStore.getState().addTurn('left', 0)
+    useDebateStore.getState().markLeadSteerFired()
     useDebateStore.getState().resetDebate()
 
     const state = useDebateStore.getState()
     expect(state.phase).toBe('setup')
     expect(state.turns).toHaveLength(0)
     expect(state.config).toBeNull()
+    expect(state.leadSteerFired).toBe(false)
+    expect(state.leadSynthesisFired).toBe(false)
+  })
+
+  it('marks lead flags and clears them on restart', () => {
+    useDebateStore.getState().startDebate(mockConfig)
+    expect(useDebateStore.getState().leadSteerFired).toBe(false)
+
+    useDebateStore.getState().markLeadSteerFired()
+    expect(useDebateStore.getState().leadSteerFired).toBe(true)
+
+    useDebateStore.getState().markLeadSynthesisFired()
+    expect(useDebateStore.getState().leadSynthesisFired).toBe(true)
+
+    // Restarting should reset both flags
+    useDebateStore.getState().startDebate(mockConfig)
+    expect(useDebateStore.getState().leadSteerFired).toBe(false)
+    expect(useDebateStore.getState().leadSynthesisFired).toBe(false)
   })
 
   it('transitions to concluding phase', () => {

@@ -6,12 +6,12 @@ import {
   DebateFormatId,
 } from '../debateFormats'
 
-const ALL_IDS: DebateFormatId[] = ['classic', 'discussion', 'dialectic', 'heated', 'socratic', 'oxford']
+const ALL_IDS: DebateFormatId[] = ['classic', 'discussion', 'dialectic', 'heated', 'socratic', 'oxford', 'brainstorm']
 
 describe('DEBATE_FORMATS catalog', () => {
-  it('contains all 6 required formats', () => {
+  it('contains all 7 required formats', () => {
     expect(Object.keys(DEBATE_FORMATS)).toEqual(expect.arrayContaining(ALL_IDS))
-    expect(Object.keys(DEBATE_FORMATS)).toHaveLength(6)
+    expect(Object.keys(DEBATE_FORMATS)).toHaveLength(7)
   })
 
   it('default format is classic', () => {
@@ -25,8 +25,8 @@ describe('DEBATE_FORMATS catalog', () => {
     expect(f.emoji).toBeTruthy()
     expect(f.blurb).toBeTruthy()
     expect(['adversarial', 'collaborative', 'questioner']).toContain(f.framing)
-    expect(['short', 'mixed', 'long']).toContain(f.turnRhythm)
-    expect(['verdict', 'synthesis', 'open']).toContain(f.ending)
+    expect(['short', 'mixed', 'long', 'brainstorm']).toContain(f.turnRhythm)
+    expect(['verdict', 'synthesis', 'open', 'best-idea']).toContain(f.ending)
   })
 
   it('verdict formats are classic and oxford', () => {
@@ -40,14 +40,23 @@ describe('DEBATE_FORMATS catalog', () => {
     expect(synthFormats).toEqual(['dialectic'])
   })
 
-  it('collaborative framing covers discussion and dialectic', () => {
+  it('best-idea ending is brainstorm only', () => {
+    const bestIdeaFormats = ALL_IDS.filter((id) => DEBATE_FORMATS[id].ending === 'best-idea')
+    expect(bestIdeaFormats).toEqual(['brainstorm'])
+  })
+
+  it('collaborative framing covers discussion, dialectic, and brainstorm', () => {
     const collab = ALL_IDS.filter((id) => DEBATE_FORMATS[id].framing === 'collaborative')
-    expect(collab).toEqual(expect.arrayContaining(['discussion', 'dialectic']))
+    expect(collab).toEqual(expect.arrayContaining(['discussion', 'dialectic', 'brainstorm']))
   })
 
   it('questioner framing is socratic only', () => {
     const questioner = ALL_IDS.filter((id) => DEBATE_FORMATS[id].framing === 'questioner')
     expect(questioner).toEqual(['socratic'])
+  })
+
+  it('brainstorm format has brainstorm rhythm', () => {
+    expect(DEBATE_FORMATS.brainstorm.turnRhythm).toBe('brainstorm')
   })
 })
 
@@ -69,6 +78,38 @@ describe('selectTurnLengthTarget', () => {
     const unique = new Set(results)
     // mixed rhythm should yield at least 3 distinct targets over 8 turns
     expect(unique.size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('brainstorm rhythm produces varied results across 8 turn indices', () => {
+    const format = DEBATE_FORMATS.brainstorm
+    const results = Array.from({ length: 8 }, (_, i) =>
+      selectTurnLengthTarget(format, 2, i)
+    )
+    const unique = new Set(results)
+    // brainstorm rhythm should yield at least 2 distinct targets
+    expect(unique.size).toBeGreaterThanOrEqual(2)
+  })
+
+  it('brainstorm rhythm skews shorter than long rhythm', () => {
+    const brainstormFmt = DEBATE_FORMATS.brainstorm
+    const longFmt = DEBATE_FORMATS.oxford
+
+    const lengthRank = (s: string) => {
+      if (s.includes('ONE')) return 0
+      if (s.includes('jab')) return 1
+      if (s.includes('paragraph') && !s.includes('2–3')) return 2
+      return 3
+    }
+
+    const brainstormAvg =
+      Array.from({ length: 8 }, (_, i) => lengthRank(selectTurnLengthTarget(brainstormFmt, 2, i)))
+        .reduce((a: number, b) => a + b, 0) / 8
+
+    const longAvg =
+      Array.from({ length: 8 }, (_, i) => lengthRank(selectTurnLengthTarget(longFmt, 2, i)))
+        .reduce((a: number, b) => a + b, 0) / 8
+
+    expect(brainstormAvg).toBeLessThan(longAvg)
   })
 
   it('short rhythm format produces shorter targets than long rhythm on average', () => {

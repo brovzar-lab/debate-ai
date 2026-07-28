@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Model, DebateConfig, Debater } from '../../types'
+import { Model, DebateConfig, Debater, BrainstormSubject } from '../../types'
 import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
@@ -7,11 +7,12 @@ import { FormatSelector } from './FormatSelector'
 import { isDemoMode, getOpenRouterKey, setOpenRouterKey, clearOpenRouterKey } from '../../lib/demo'
 import { DEFAULT_VOICE_IDS } from '../../lib/tts'
 import { useAvailableModels } from '../../hooks/useAvailableModels'
-import { DEFAULT_FORMAT_ID, DebateFormatId } from '../../data/debateFormats'
+import { DEFAULT_FORMAT_ID, DebateFormatId, BRAINSTORM_SUBJECTS } from '../../data/debateFormats'
 import {
   DEMO_TOPIC,
   DEMO_DEBATERS,
   DEMO_FORMAT_ID,
+  DEMO_BRAINSTORM_SUBJECT,
 } from '../../data/demoScript'
 
 interface SetupScreenProps {
@@ -46,6 +47,9 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [leftVoiceId, setLeftVoiceId] = useState<string>(DEFAULT_VOICE_IDS.left)
   const [rightVoiceId, setRightVoiceId] = useState<string>(DEFAULT_VOICE_IDS.right)
   const [selectedFormat, setSelectedFormat] = useState<DebateFormatId>(demo ? DEMO_FORMAT_ID : DEFAULT_FORMAT_ID)
+  const [subject, setSubject] = useState<BrainstormSubject>(
+    demo && DEMO_FORMAT_ID === 'brainstorm' ? DEMO_BRAINSTORM_SUBJECT : 'film'
+  )
   const [turnCap, setTurnCap] = useState(5)
   const [apiKey, setApiKey] = useState(getOpenRouterKey() ?? '')
   const [showSettings, setShowSettings] = useState(false)
@@ -88,6 +92,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       intensity: 2,
       turnCap,
       format: selectedFormat,
+      subject: selectedFormat === 'brainstorm' ? subject : undefined,
     })
   }
 
@@ -139,19 +144,48 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         {/* Topic */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-            Debate Topic
+            {selectedFormat === 'brainstorm' ? 'What are we brainstorming?' : 'Debate Topic'}
           </label>
           <textarea
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             rows={2}
-            placeholder="Enter a topic, idea, claim, or question to debate…"
+            placeholder={
+              selectedFormat === 'brainstorm'
+                ? 'e.g. "What\'s the best film concept about artificial memory?" or "Startup ideas for the creator economy"'
+                : 'Enter a topic, idea, claim, or question to debate…'
+            }
             className="w-full rounded-xl bg-zinc-800 px-4 py-3 text-base text-white placeholder-zinc-600 outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
           />
         </div>
 
         {/* Format selector */}
         <FormatSelector value={selectedFormat} onChange={setSelectedFormat} />
+
+        {/* Brainstorm domain selector — only shown when brainstorm is selected */}
+        {selectedFormat === 'brainstorm' && (
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
+              Brainstorm Domain
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {BRAINSTORM_SUBJECTS.map(({ id, label, emoji }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSubject(id)}
+                  className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
+                    subject === id
+                      ? 'border-amber-500 bg-amber-950/40 text-amber-300'
+                      : 'border-zinc-700 bg-zinc-800/40 text-zinc-300 hover:border-zinc-500'
+                  }`}
+                >
+                  {emoji} {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Podiums */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -240,7 +274,9 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             disabled={!canStart}
             className="rounded-xl bg-red-600 px-8 py-3 text-base font-black tracking-wide text-white transition-all hover:bg-red-500 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 shadow-lg shadow-red-900/40"
           >
-            {demo ? '🎬 Start Demo Debate' : '⚔️ Start Debate'}
+            {demo
+              ? (selectedFormat === 'brainstorm' ? '💡 Start Demo Brainstorm' : '🎬 Start Demo Debate')
+              : (selectedFormat === 'brainstorm' ? '💡 Start Brainstorm' : '⚔️ Start Debate')}
           </button>
         </div>
 
