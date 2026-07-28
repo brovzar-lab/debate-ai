@@ -46,6 +46,9 @@ export function serializeDebateMarkdown(params: ExportParams): string {
   lines.push('| | Left | Right |')
   lines.push('|---|---|---|')
   lines.push(`| **Persona** | ${left.personaName} | ${right.personaName} |`)
+  if (left.persona || right.persona) {
+    lines.push(`| **Template** | ${left.persona?.name ?? '—'} | ${right.persona?.name ?? '—'} |`)
+  }
   lines.push(`| **Model** | ${left.model.name} | ${right.model.name} |`)
   lines.push(`| **Stance** | ${left.stance} | ${right.stance} |`)
   lines.push('')
@@ -104,8 +107,10 @@ export function serializeDebatePlain(params: ExportParams): string {
   if (subject) lines.push(`Subject: ${subject}`)
   lines.push(`Date:    ${isoDate()}`)
   lines.push('')
-  lines.push(`Left:    ${left.personaName} — ${left.model.name} (${left.stance})`)
-  lines.push(`Right:   ${right.personaName} — ${right.model.name} (${right.stance})`)
+  const leftLabel = left.persona ? `${left.personaName} [${left.persona.name}]` : left.personaName
+  const rightLabel = right.persona ? `${right.personaName} [${right.persona.name}]` : right.personaName
+  lines.push(`Left:    ${leftLabel} — ${left.model.name} (${left.stance})`)
+  lines.push(`Right:   ${rightLabel} — ${right.model.name} (${right.stance})`)
   lines.push(sep)
   lines.push('')
 

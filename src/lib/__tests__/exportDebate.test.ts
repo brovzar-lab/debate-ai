@@ -75,6 +75,27 @@ describe('serializeDebateMarkdown', () => {
     expect(md).not.toContain('**Subject:**')
   })
 
+  it('includes Template row when debater has a persona template', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      config: {
+        ...baseParams.config,
+        debaters: [
+          { ...baseParams.config.debaters[0], personaName: 'SPARK', persona: { name: 'The Screenwriter' } },
+          baseParams.config.debaters[1],
+        ],
+      },
+    }
+    const md = serializeDebateMarkdown(params)
+    expect(md).toContain('**Template**')
+    expect(md).toContain('The Screenwriter')
+  })
+
+  it('omits Template row when no debater has a persona template', () => {
+    const md = serializeDebateMarkdown(baseParams)
+    expect(md).not.toContain('**Template**')
+  })
+
   it('renders lead synthesis as a ## Best Idea section', () => {
     const params: ExportParams = {
       ...baseParams,
@@ -157,6 +178,27 @@ describe('serializeDebatePlain', () => {
   it('adds "Debate concluded." footer for done phase', () => {
     const txt = serializeDebatePlain(baseParams)
     expect(txt).toContain('Debate concluded.')
+  })
+
+  it('appends template name in brackets when debater has a persona template', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      config: {
+        ...baseParams.config,
+        debaters: [
+          { ...baseParams.config.debaters[0], personaName: 'SPARK', persona: { name: 'The Screenwriter' } },
+          baseParams.config.debaters[1],
+        ],
+      },
+    }
+    const txt = serializeDebatePlain(params)
+    expect(txt).toContain('SPARK [The Screenwriter]')
+  })
+
+  it('omits template brackets when debater has no persona template', () => {
+    const txt = serializeDebatePlain(baseParams)
+    expect(txt).not.toContain('The Firebrand [')
+    expect(txt).not.toContain('The Professor [')
   })
 })
 
