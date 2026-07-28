@@ -7,6 +7,7 @@ import { DebaterBubble } from './DebaterBubble'
 import { SpeakerHeader } from './SpeakerHeader'
 import { TurnIndicator } from './TurnIndicator'
 import { DirectorControls } from './DirectorControls'
+import { ExportControls } from './ExportControls'
 import { ToastManager } from '../shared/Toast'
 import { isDemoMode } from '../../lib/demo'
 import { replayTurnAudio, clearTurnAudioCache, DEFAULT_VOICE_IDS } from '../../lib/tts'
@@ -224,6 +225,7 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
             onWrapUp={handleWrapUp}
             isStreaming={isStreaming}
           />
+          <ExportControls onToast={pushToast} />
         </div>
       </div>
 
