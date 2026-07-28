@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Model, DebateConfig, Debater, BrainstormSubject } from '../../types'
+import { Model, DebateConfig, Debater, BrainstormSubject, Persona } from '../../types'
 import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
@@ -13,7 +13,10 @@ import {
   DEMO_DEBATERS,
   DEMO_FORMAT_ID,
   DEMO_BRAINSTORM_SUBJECT,
+  DEMO_LEFT_PERSONA_TEMPLATE_ID,
+  DEMO_RIGHT_PERSONA_TEMPLATE_ID,
 } from '../../data/demoScript'
+import { type PersonaTemplate, getTemplateById } from '../../data/personaTemplates'
 
 interface SetupScreenProps {
   onStart: (config: DebateConfig) => void
@@ -50,11 +53,47 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [subject, setSubject] = useState<BrainstormSubject>(
     demo && DEMO_FORMAT_ID === 'brainstorm' ? DEMO_BRAINSTORM_SUBJECT : 'film'
   )
+  const [leftPersonaTemplate, setLeftPersonaTemplate] = useState<PersonaTemplate | null>(
+    demo ? (getTemplateById(DEMO_LEFT_PERSONA_TEMPLATE_ID) ?? null) : null
+  )
+  const [rightPersonaTemplate, setRightPersonaTemplate] = useState<PersonaTemplate | null>(
+    demo ? (getTemplateById(DEMO_RIGHT_PERSONA_TEMPLATE_ID) ?? null) : null
+  )
+  const [leftCustomPersona, setLeftCustomPersona] = useState('')
+  const [rightCustomPersona, setRightCustomPersona] = useState('')
   const [turnCap, setTurnCap] = useState(5)
   const [apiKey, setApiKey] = useState(getOpenRouterKey() ?? '')
   const [showSettings, setShowSettings] = useState(false)
 
   const assignedModelIds = new Set([leftModel?.id, rightModel?.id].filter(Boolean))
+
+  const handleFormatChange = (fmt: DebateFormatId) => {
+    setSelectedFormat(fmt)
+    setLeftPersonaTemplate(null)
+    setRightPersonaTemplate(null)
+  }
+
+  const handleSubjectChange = (sub: BrainstormSubject) => {
+    setSubject(sub)
+    setLeftPersonaTemplate(null)
+    setRightPersonaTemplate(null)
+  }
+
+  const buildPersona = (template: PersonaTemplate | null, custom: string): Persona | undefined => {
+    if (template) {
+      return {
+        id: template.id,
+        name: template.name,
+        vibe: template.vibe,
+        systemPromptFragment: template.systemPromptFragment,
+      }
+    }
+    const trimmed = custom.trim()
+    if (trimmed) {
+      return { name: trimmed.slice(0, 40), systemPromptFragment: trimmed }
+    }
+    return undefined
+  }
 
   const handleSaveKey = () => {
     if (apiKey.trim()) {
@@ -77,6 +116,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       personaName: leftPersona || leftModel!.name,
       stance: leftStance || 'Pro side',
       voiceId: leftVoiceId,
+      persona: buildPersona(leftPersonaTemplate, leftCustomPersona),
     }
     const rightDebater: Debater = {
       side: 'right',
@@ -84,6 +124,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       personaName: rightPersona || rightModel!.name,
       stance: rightStance || 'Con side',
       voiceId: rightVoiceId,
+      persona: buildPersona(rightPersonaTemplate, rightCustomPersona),
     }
 
     onStart({
@@ -160,7 +201,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         </div>
 
         {/* Format selector */}
-        <FormatSelector value={selectedFormat} onChange={setSelectedFormat} />
+        <FormatSelector value={selectedFormat} onChange={handleFormatChange} />
 
         {/* Brainstorm domain selector — only shown when brainstorm is selected */}
         {selectedFormat === 'brainstorm' && (
@@ -173,7 +214,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setSubject(id)}
+                  onClick={() => handleSubjectChange(id)}
                   className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-all ${
                     subject === id
                       ? 'border-amber-500 bg-amber-950/40 text-amber-300'
@@ -195,10 +236,16 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             personaName={leftPersona}
             stance={leftStance}
             voiceId={leftVoiceId}
+            format={selectedFormat}
+            subject={selectedFormat === 'brainstorm' ? subject : undefined}
+            personaTemplate={leftPersonaTemplate}
+            customPersona={leftCustomPersona}
             onModelDrop={setLeftModel}
             onPersonaChange={setLeftPersona}
             onStanceChange={setLeftStance}
             onVoiceChange={setLeftVoiceId}
+            onPersonaTemplateChange={setLeftPersonaTemplate}
+            onCustomPersonaChange={setLeftCustomPersona}
           />
           <DebaterPodium
             side="right"
@@ -206,10 +253,16 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             personaName={rightPersona}
             stance={rightStance}
             voiceId={rightVoiceId}
+            format={selectedFormat}
+            subject={selectedFormat === 'brainstorm' ? subject : undefined}
+            personaTemplate={rightPersonaTemplate}
+            customPersona={rightCustomPersona}
             onModelDrop={setRightModel}
             onPersonaChange={setRightPersona}
             onStanceChange={setRightStance}
             onVoiceChange={setRightVoiceId}
+            onPersonaTemplateChange={setRightPersonaTemplate}
+            onCustomPersonaChange={setRightCustomPersona}
           />
         </div>
 

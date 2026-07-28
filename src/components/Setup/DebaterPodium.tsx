@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { Model, Side } from '../../types'
 import { MODELS } from '../../data/models'
 import { AVAILABLE_VOICES, DEFAULT_VOICE_IDS, synthesizeSentence } from '../../lib/tts'
+import type { DebateFormatId, BrainstormSubject } from '../../data/debateFormats'
+import type { PersonaTemplate } from '../../data/personaTemplates'
+import { PersonaSection } from './PersonaSection'
 
 const PREVIEW_LINE = "Let the debate begin — I stand ready to make my case."
 
@@ -11,10 +14,16 @@ interface DebaterPodiumProps {
   personaName: string
   stance: string
   voiceId: string
+  format: DebateFormatId
+  subject?: BrainstormSubject
+  personaTemplate: PersonaTemplate | null
+  customPersona: string
   onModelDrop: (model: Model) => void
   onPersonaChange: (name: string) => void
   onStanceChange: (stance: string) => void
   onVoiceChange: (voiceId: string) => void
+  onPersonaTemplateChange: (t: PersonaTemplate | null) => void
+  onCustomPersonaChange: (text: string) => void
 }
 
 export function DebaterPodium({
@@ -23,10 +32,16 @@ export function DebaterPodium({
   personaName,
   stance,
   voiceId,
+  format,
+  subject,
+  personaTemplate,
+  customPersona,
   onModelDrop,
   onPersonaChange,
   onStanceChange,
   onVoiceChange,
+  onPersonaTemplateChange,
+  onCustomPersonaChange,
 }: DebaterPodiumProps) {
   const [dragOver, setDragOver] = useState(false)
   const [previewing, setPreviewing] = useState(false)
@@ -137,6 +152,16 @@ export function DebaterPodium({
               </button>
             </div>
           </div>
+
+          {/* Persona section */}
+          <PersonaSection
+            format={format}
+            subject={subject}
+            selectedTemplate={personaTemplate}
+            customText={customPersona}
+            onTemplateSelect={onPersonaTemplateChange}
+            onCustomTextChange={onCustomPersonaChange}
+          />
         </div>
       )}
     </div>

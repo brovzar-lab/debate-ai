@@ -1,5 +1,9 @@
 import type { DebateFormatId, BrainstormSubject } from './debateFormats'
 
+// Demo personas for the brainstorm/film scenario
+export const DEMO_LEFT_PERSONA_TEMPLATE_ID = 'auteur'
+export const DEMO_RIGHT_PERSONA_TEMPLATE_ID = 'screenwriter'
+
 export interface DemoTurn {
   side: 'left' | 'right'
   text: string

@@ -172,6 +172,10 @@ Speak in first person. Be ${intensityText}.
 ${formatPersona[format.id] ?? formatPersona.classic}
 Respond in exactly ${lengthTarget}. No headers. No bullet points. Pure creative thought.`
 
+  if (debater.persona?.systemPromptFragment) {
+    prompt += `\n\nYour voice and approach: ${debater.persona.systemPromptFragment}`
+  }
+
   if (isBrainstorm) {
     const subject = config.subject ?? 'general'
     const criteria = BRAINSTORM_CRAFT_CRITERIA[subject]
