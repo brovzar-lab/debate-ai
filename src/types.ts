@@ -13,12 +13,18 @@ export interface Model {
 export type Side = 'left' | 'right'
 export type DebatePhase = 'setup' | 'debating' | 'paused' | 'concluding' | 'done'
 
+export interface Persona {
+  name: string
+  systemPromptFragment: string
+}
+
 export interface Debater {
   side: Side
   model: Model
   personaName: string
   stance: string
   voiceId?: string
+  persona?: Persona
 }
 
 export interface DebateConfig {

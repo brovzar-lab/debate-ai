@@ -135,6 +135,10 @@ export function buildSystemPrompt(
   const debater = config.debaters[side === 'left' ? 0 : 1]
   const format = DEBATE_FORMATS[config.format ?? DEFAULT_FORMAT_ID]
 
+  const personaFragment = debater.persona?.systemPromptFragment
+    ? `\n${debater.persona.systemPromptFragment}`
+    : ''
+
   const adversarialIntensityDescriptions: Record<number, string> = {
     1: 'calm and measured, making thoughtful logical arguments',
     2: 'confident and assertive, pressing your points firmly',
@@ -169,7 +173,7 @@ export function buildSystemPrompt(
   let prompt = `You are ${debater.personaName}, in a brainstorm session about: "${config.topic}".
 Your role: ${debater.stance}.
 Speak in first person. Be ${intensityText}.
-${formatPersona[format.id] ?? formatPersona.classic}
+${formatPersona[format.id] ?? formatPersona.classic}${personaFragment}
 Respond in exactly ${lengthTarget}. No headers. No bullet points. Pure creative thought.`
 
   if (isBrainstorm) {

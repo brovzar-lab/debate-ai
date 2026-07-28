@@ -66,6 +66,16 @@ export function SpeakerHeader({ debater, side, isActive, isStreaming, phase, isM
             </button>
           )}
         </p>
+        {debater.persona && (
+          <p
+            className={`text-xs italic leading-tight truncate max-w-[150px] transition-opacity ${isActive || isDone ? 'text-zinc-400' : 'text-zinc-600'}`}
+            title={debater.persona.name}
+          >
+            {debater.persona.name.length > 24
+              ? debater.persona.name.slice(0, 24) + '…'
+              : debater.persona.name}
+          </p>
+        )}
         <p
           className={`text-xs leading-tight truncate max-w-[150px] transition-opacity ${isActive ? 'text-zinc-400' : 'text-zinc-600'}`}
         >

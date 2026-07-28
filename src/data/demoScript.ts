@@ -1,4 +1,5 @@
 import type { DebateFormatId, BrainstormSubject } from './debateFormats'
+import type { Persona } from '../types'
 
 export interface DemoTurn {
   side: 'left' | 'right'
@@ -11,13 +12,21 @@ export const DEMO_BRAINSTORM_SUBJECT: BrainstormSubject = 'film'
 
 export const DEMO_TOPIC = "What's the best film concept involving artificial memory?"
 
-export const DEMO_DEBATERS = {
+export const DEMO_DEBATERS: {
+  left: { personaName: string; stance: string; modelName: string; color: string; emoji: string; persona: Persona }
+  right: { personaName: string; stance: string; modelName: string; color: string; emoji: string; persona: Persona }
+} = {
   left: {
     personaName: 'SPARK',
     stance: 'Yes-and — every idea is the seed of the best idea',
     modelName: 'GPT-4o',
     color: '#10a37f',
     emoji: '✨',
+    persona: {
+      name: 'The Screenwriter',
+      systemPromptFragment:
+        'Live in story structure, character wants vs needs, and scene-level craft. Kill weak premises fast using the Pixar spine — *Once upon a time… Until one day… Because of that… Until finally…* Strong characters make strong movies.',
+    },
   },
   right: {
     personaName: 'NOVA',
@@ -25,6 +34,11 @@ export const DEMO_DEBATERS = {
     modelName: 'Claude 3.5 Sonnet',
     color: '#8b5cf6',
     emoji: '💡',
+    persona: {
+      name: 'The Auteur',
+      systemPromptFragment:
+        'Think in directorial vision and thematic resonance. Champion ideas that have a *why* beneath them — a human truth the film is trying to express. Elevate whatever has cinematic specificity and emotional depth.',
+    },
   },
 }
 

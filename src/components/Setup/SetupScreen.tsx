@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Model, DebateConfig, Debater, BrainstormSubject } from '../../types'
+import { Model, DebateConfig, Debater, BrainstormSubject, Persona } from '../../types'
 import { MODELS } from '../../data/models'
 import { ModelCard } from './ModelCard'
 import { DebaterPodium } from './DebaterPodium'
@@ -46,6 +46,12 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   const [rightStance, setRightStance] = useState(demo ? DEMO_DEBATERS.right.stance : '')
   const [leftVoiceId, setLeftVoiceId] = useState<string>(DEFAULT_VOICE_IDS.left)
   const [rightVoiceId, setRightVoiceId] = useState<string>(DEFAULT_VOICE_IDS.right)
+  const [leftPersonaObj, setLeftPersonaObj] = useState<Persona | undefined>(
+    demo ? DEMO_DEBATERS.left.persona : undefined
+  )
+  const [rightPersonaObj, setRightPersonaObj] = useState<Persona | undefined>(
+    demo ? DEMO_DEBATERS.right.persona : undefined
+  )
   const [selectedFormat, setSelectedFormat] = useState<DebateFormatId>(demo ? DEMO_FORMAT_ID : DEFAULT_FORMAT_ID)
   const [subject, setSubject] = useState<BrainstormSubject>(
     demo && DEMO_FORMAT_ID === 'brainstorm' ? DEMO_BRAINSTORM_SUBJECT : 'film'
@@ -77,6 +83,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       personaName: leftPersona || leftModel!.name,
       stance: leftStance || 'Pro side',
       voiceId: leftVoiceId,
+      persona: leftPersonaObj,
     }
     const rightDebater: Debater = {
       side: 'right',
@@ -84,6 +91,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
       personaName: rightPersona || rightModel!.name,
       stance: rightStance || 'Con side',
       voiceId: rightVoiceId,
+      persona: rightPersonaObj,
     }
 
     onStart({
