@@ -143,6 +143,57 @@ describe('serializeDebateMarkdown', () => {
     const md = serializeDebateMarkdown(params)
     expect(md).not.toContain('Debate concluded')
   })
+
+  it('renders verdict turn (turnNumber === -1) in a ## Result section', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'The verdict is clear.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const md = serializeDebateMarkdown(params)
+    expect(md).toContain('## Result')
+    expect(md).toContain('The verdict is clear.')
+  })
+
+  it('does not render verdict turn inside the Transcript section', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'The verdict is here.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const md = serializeDebateMarkdown(params)
+    const transcriptSection = md.split('## Transcript')[1].split('---')[0]
+    expect(transcriptSection).not.toContain('The verdict is here.')
+  })
+
+  it('omits "Debate concluded" when result turns are present', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'Final verdict.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const md = serializeDebateMarkdown(params)
+    expect(md).not.toContain('Debate concluded')
+  })
+
+  it('verdict turn does not appear labeled as a numbered debater turn', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'Verdict text.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const md = serializeDebateMarkdown(params)
+    // Only 2 real speech turns — verdict should not create a Turn 3
+    expect(md).not.toContain('(Turn 3)')
+  })
 })
 
 describe('serializeDebatePlain', () => {
@@ -175,9 +226,34 @@ describe('serializeDebatePlain', () => {
     expect(txt).toContain('The best idea is here')
   })
 
-  it('adds "Debate concluded." footer for done phase', () => {
+  it('adds "Debate concluded." footer for done phase without result turns', () => {
     const txt = serializeDebatePlain(baseParams)
     expect(txt).toContain('Debate concluded.')
+  })
+
+  it('renders verdict turn (turnNumber === -1) in a RESULT section', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'The plain verdict.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const txt = serializeDebatePlain(params)
+    expect(txt).toContain('RESULT')
+    expect(txt).toContain('The plain verdict.')
+  })
+
+  it('omits "Debate concluded." when result turns are present', () => {
+    const params: ExportParams = {
+      ...baseParams,
+      turns: [
+        ...baseParams.turns.filter((t) => t.status === 'done'),
+        { id: 'v1', side: 'left', text: 'Final verdict.', status: 'done', turnNumber: -1 },
+      ],
+    }
+    const txt = serializeDebatePlain(params)
+    expect(txt).not.toContain('Debate concluded.')
   })
 
   it('appends template name in brackets when debater has a persona template', () => {

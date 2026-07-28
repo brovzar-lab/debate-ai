@@ -28,7 +28,8 @@ export function serializeDebateMarkdown(params: ExportParams): string {
 
   const doneTurns = turns.filter((t) => t.status === 'done')
   const leadTurns = doneTurns.filter((t) => t.role === 'lead')
-  const debaterTurns = doneTurns.filter((t) => t.role !== 'lead')
+  const resultTurns = doneTurns.filter((t) => t.turnNumber === -1 && t.role !== 'lead')
+  const debaterTurns = doneTurns.filter((t) => t.role !== 'lead' && t.turnNumber !== -1)
 
   const lines: string[] = []
 
@@ -65,6 +66,17 @@ export function serializeDebateMarkdown(params: ExportParams): string {
     lines.push('')
   })
 
+  if (resultTurns.length > 0) {
+    lines.push('---')
+    lines.push('')
+    lines.push('## Result')
+    lines.push('')
+    resultTurns.forEach((turn) => {
+      lines.push(turn.text.trim())
+      lines.push('')
+    })
+  }
+
   if (leadTurns.length > 0) {
     lines.push('---')
     lines.push('')
@@ -74,7 +86,7 @@ export function serializeDebateMarkdown(params: ExportParams): string {
       lines.push(turn.text.trim())
       lines.push('')
     })
-  } else if (phase === 'done') {
+  } else if (phase === 'done' && resultTurns.length === 0) {
     lines.push('---')
     lines.push('')
     lines.push('*Debate concluded.*')
@@ -95,7 +107,8 @@ export function serializeDebatePlain(params: ExportParams): string {
 
   const doneTurns = turns.filter((t) => t.status === 'done')
   const leadTurns = doneTurns.filter((t) => t.role === 'lead')
-  const debaterTurns = doneTurns.filter((t) => t.role !== 'lead')
+  const resultTurns = doneTurns.filter((t) => t.turnNumber === -1 && t.role !== 'lead')
+  const debaterTurns = doneTurns.filter((t) => t.role !== 'lead' && t.turnNumber !== -1)
 
   const sep = '─'.repeat(60)
   const lines: string[] = []
@@ -121,6 +134,16 @@ export function serializeDebatePlain(params: ExportParams): string {
     lines.push('')
   })
 
+  if (resultTurns.length > 0) {
+    lines.push(sep)
+    lines.push('RESULT')
+    lines.push(sep)
+    resultTurns.forEach((turn) => {
+      lines.push(turn.text.trim())
+      lines.push('')
+    })
+  }
+
   if (leadTurns.length > 0) {
     lines.push(sep)
     lines.push('BEST IDEA')
@@ -129,7 +152,7 @@ export function serializeDebatePlain(params: ExportParams): string {
       lines.push(turn.text.trim())
       lines.push('')
     })
-  } else if (phase === 'done') {
+  } else if (phase === 'done' && resultTurns.length === 0) {
     lines.push(sep)
     lines.push('Debate concluded.')
     lines.push('')
