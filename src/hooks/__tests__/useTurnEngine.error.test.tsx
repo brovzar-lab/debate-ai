@@ -35,6 +35,7 @@ const config: DebateConfig = {
   ],
   intensity: 2,
   turnCap: 5,
+  format: 'classic',
 }
 
 beforeEach(() => {

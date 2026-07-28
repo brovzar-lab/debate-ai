@@ -4,7 +4,6 @@ import {
   DEFAULT_FORMAT_ID,
   selectTurnLengthTarget,
   DebateFormatId,
-  DebateFormat,
 } from '../debateFormats'
 
 const ALL_IDS: DebateFormatId[] = ['classic', 'discussion', 'dialectic', 'heated', 'socratic', 'oxford']
@@ -85,11 +84,11 @@ describe('selectTurnLengthTarget', () => {
 
     const shortAvg =
       Array.from({ length: 8 }, (_, i) => lengthRank(selectTurnLengthTarget(shortFmt, 2, i)))
-        .reduce((a, b) => a + b, 0) / 8
+        .reduce((a: number, b) => a + b, 0) / 8
 
     const longAvg =
       Array.from({ length: 8 }, (_, i) => lengthRank(selectTurnLengthTarget(longFmt, 2, i)))
-        .reduce((a, b) => a + b, 0) / 8
+        .reduce((a: number, b) => a + b, 0) / 8
 
     expect(shortAvg).toBeLessThan(longAvg)
   })
