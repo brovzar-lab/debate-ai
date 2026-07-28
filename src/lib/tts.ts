@@ -4,6 +4,54 @@ export const DEFAULT_VOICE_IDS = {
   right: '21m00Tcm4TlvDq8ikWAM',  // Rachel — clear, professional female
 } as const
 
+// Cache of full-turn audio object URLs keyed by turn ID
+const turnAudioCache = new Map<string, string>()
+
+// Singleton for the currently replaying audio element
+let replayAudioEl: HTMLAudioElement | null = null
+
+/**
+ * Replays the full text of a turn using TTS.
+ * Caches the audio URL by turnId; subsequent clicks replay from cache.
+ * Stops any in-progress replay before starting a new one.
+ */
+export async function replayTurnAudio(
+  turnId: string,
+  text: string,
+  voiceId: string,
+  intensity: number
+): Promise<void> {
+  if (replayAudioEl) {
+    replayAudioEl.pause()
+    replayAudioEl = null
+  }
+
+  let url = turnAudioCache.get(turnId)
+  if (!url) {
+    url = await synthesizeSentence(text, voiceId, intensity)
+    turnAudioCache.set(turnId, url)
+  }
+
+  return new Promise<void>((resolve) => {
+    const audio = new Audio(url!)
+    replayAudioEl = audio
+    audio.onended = () => { replayAudioEl = null; resolve() }
+    audio.onerror = () => { replayAudioEl = null; resolve() }
+    audio.play().catch(() => { replayAudioEl = null; resolve() })
+  })
+}
+
+/**
+ * Clears the turn audio cache and stops any in-progress replay.
+ * Call when the debate resets.
+ */
+export function clearTurnAudioCache(): void {
+  replayAudioEl?.pause()
+  replayAudioEl = null
+  turnAudioCache.forEach((url) => URL.revokeObjectURL(url))
+  turnAudioCache.clear()
+}
+
 export const AVAILABLE_VOICES = [
   { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam (deep, authoritative)' },
   { id: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel (clear, professional)' },

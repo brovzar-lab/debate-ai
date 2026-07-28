@@ -4,9 +4,10 @@ interface DebaterBubbleProps {
   turn: Turn
   config: DebateConfig
   isNewest?: boolean
+  onReplayClick?: () => void
 }
 
-export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
+export function DebaterBubble({ turn, config, isNewest, onReplayClick }: DebaterBubbleProps) {
   const isLeft = turn.side === 'left'
   const isVerdict = turn.turnNumber === -1 && turn.role !== 'lead'
   const isLead = turn.role === 'lead'
@@ -57,6 +58,8 @@ export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
     )
   }
 
+  const canReplay = !isStreaming && !!onReplayClick
+
   return (
     <div className={`flex w-full gap-3 ${isLeft ? 'flex-row' : 'flex-row-reverse'}`}>
       {/* Avatar */}
@@ -80,7 +83,9 @@ export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
           {debater?.personaName}
         </p>
         <div
-          className="rounded-2xl px-4 py-3 text-sm leading-relaxed text-zinc-100 shadow-md"
+          className={`group relative rounded-2xl px-4 py-3 text-sm leading-relaxed text-zinc-100 shadow-md${canReplay ? ' cursor-pointer' : ''}`}
+          onClick={canReplay ? onReplayClick : undefined}
+          title={canReplay ? 'Click to replay voice' : undefined}
           style={{
             background: isLeft
               ? `linear-gradient(135deg, #27272a 0%, #1c1c1f 100%)`
@@ -95,6 +100,11 @@ export function DebaterBubble({ turn, config, isNewest }: DebaterBubbleProps) {
         >
           {turn.text}
           {isStreaming && <Cursor color={color} />}
+          {canReplay && (
+            <span className="pointer-events-none absolute top-2 right-2 text-xs opacity-0 transition-opacity group-hover:opacity-60">
+              🔊
+            </span>
+          )}
         </div>
       </div>
     </div>

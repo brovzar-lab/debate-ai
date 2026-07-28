@@ -9,6 +9,8 @@ import { TurnIndicator } from './TurnIndicator'
 import { DirectorControls } from './DirectorControls'
 import { ToastManager } from '../shared/Toast'
 import { isDemoMode } from '../../lib/demo'
+import { replayTurnAudio, clearTurnAudioCache, DEFAULT_VOICE_IDS } from '../../lib/tts'
+import type { Turn } from '../../types'
 
 interface ArenaScreenProps {
   onReset: () => void
@@ -22,11 +24,12 @@ interface ToastItem {
 let toastCounter = 0
 
 export function ArenaScreen({ onReset }: ArenaScreenProps) {
-  const { config, turns, phase, currentSide, turnCount, setDirectorInstruction } = useDebateStore()
+  const { config, turns, phase, currentSide, turnCount, intensity, setDirectorInstruction } = useDebateStore()
   const { enabled: voiceEnabled, leftMuted, rightMuted, toggleEnabled, setLeftMuted, setRightMuted } =
     useVoiceStore()
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const transcriptRef = useRef<HTMLDivElement>(null)
+  const [scrollLocked, setScrollLocked] = useState(true)
 
   const pushToast = useCallback((message: string) => {
     const id = `toast-${++toastCounter}`
@@ -41,12 +44,51 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   const isStreaming = turns.some((t) => t.status === 'streaming')
   const newestTurnId = turns.at(-1)?.id
 
-  // Auto-scroll transcript
+  // Auto-scroll transcript — only when scroll is locked (user hasn't scrolled up)
   useEffect(() => {
+    if (!scrollLocked || !transcriptRef.current) return
+    transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight
+  }, [turns, scrollLocked])
+
+  // Detect when the user scrolls up (pauses auto-scroll) or back to bottom (re-engages)
+  const handleScroll = useCallback(() => {
+    const el = transcriptRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
+    setScrollLocked(atBottom)
+  }, [])
+
+  // Re-engage scroll lock and jump to bottom
+  const jumpToLatest = useCallback(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight
     }
-  }, [turns])
+    setScrollLocked(true)
+  }, [])
+
+  // Re-lock scroll on new debate start
+  useEffect(() => {
+    if (phase === 'setup') {
+      setScrollLocked(true)
+      clearTurnAudioCache()
+    }
+  }, [phase])
+
+  // Replay a completed turn's audio using its speaker's voice
+  const handleReplay = useCallback(async (turn: Turn) => {
+    if (isDemoMode()) {
+      pushToast('Demo mode — voice replay not available')
+      return
+    }
+    const voiceId = turn.side === 'left'
+      ? (config!.debaters[0].voiceId ?? DEFAULT_VOICE_IDS.left)
+      : (config!.debaters[1].voiceId ?? DEFAULT_VOICE_IDS.right)
+    try {
+      await replayTurnAudio(turn.id, turn.text, voiceId, intensity)
+    } catch {
+      pushToast('Could not replay voice')
+    }
+  }, [config, intensity, pushToast])
 
   // Turn loop driver (isStreaming guard is sufficient — see APPU-1421)
   useEffect(() => {
@@ -78,7 +120,7 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950 text-white">
+    <div className="relative flex h-screen flex-col bg-zinc-950 text-white">
       {/* Fighter header — arena staging */}
       <div className="flex shrink-0 items-center border-b border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-lg">
         <SpeakerHeader
@@ -130,6 +172,7 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
         ref={transcriptRef}
         className="flex-1 overflow-y-auto px-4 py-6 md:px-8"
         style={{ scrollBehavior: 'smooth' }}
+        onScroll={handleScroll}
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {/* Topic banner */}
@@ -143,10 +186,27 @@ export function ArenaScreen({ onReset }: ArenaScreenProps) {
               turn={turn}
               config={config}
               isNewest={turn.id === newestTurnId}
+              onReplayClick={
+                turn.role !== 'lead' && turn.turnNumber !== -1
+                  ? () => handleReplay(turn)
+                  : undefined
+              }
             />
           ))}
         </div>
       </div>
+
+      {/* Jump to latest button — shown when user has scrolled up */}
+      {!scrollLocked && turns.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-center">
+          <button
+            onClick={jumpToLatest}
+            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-zinc-700/90 px-4 py-2 text-sm font-medium text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-zinc-600"
+          >
+            ↓ Jump to latest
+          </button>
+        </div>
+      )}
 
       {/* Turn indicator + director controls */}
       <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/90 px-4 py-3 shadow-lg">
