@@ -6,7 +6,9 @@ import {
   DEMO_PROVOKE_RESPONSES,
   DEMO_CLOSING,
   DEMO_VERDICT,
+  DEMO_SYNTHESIS,
 } from '../data/demoScript'
+import { DEBATE_FORMATS, DEFAULT_FORMAT_ID } from '../data/debateFormats'
 
 const BASE_CHAR_DELAY = 18
 const JITTER = 12
@@ -30,9 +32,6 @@ export function useDemoEngine() {
 
       if (isClosing) {
         text = DEMO_CLOSING[side]
-        if (side === 'right') {
-          // after both closing statements, add verdict
-        }
       } else if (directorInstruction?.toLowerCase().includes('provoke')) {
         text = DEMO_PROVOKE_RESPONSES[side]
         turnIndexRef.current = Math.max(0, turnIndexRef.current - 1)
@@ -53,16 +52,30 @@ export function useDemoEngine() {
 
       finishTurn(turnId)
 
-      // Add verdict after both closing statements
+      // Add format-appropriate ending after both closing statements
       if (isClosing && side === 'right') {
+        const format = DEBATE_FORMATS[config?.format ?? DEFAULT_FORMAT_ID]
         await sleep(600)
-        const verdictId = addTurn('left', -1)
-        const verdictPrefix = '⚖️ VERDICT: '
-        for (const char of verdictPrefix + DEMO_VERDICT) {
-          appendToTurn(verdictId, char)
-          await sleep(10)
+
+        if (format.ending === 'verdict') {
+          const verdictId = addTurn('left', -1)
+          const prefix = '⚖️ VERDICT: '
+          for (const char of prefix + DEMO_VERDICT) {
+            appendToTurn(verdictId, char)
+            await sleep(10)
+          }
+          finishTurn(verdictId)
+        } else if (format.ending === 'synthesis') {
+          const synthId = addTurn('left', -1)
+          const prefix = '☯️ SYNTHESIS: '
+          for (const char of prefix + DEMO_SYNTHESIS) {
+            appendToTurn(synthId, char)
+            await sleep(10)
+          }
+          finishTurn(synthId)
         }
-        finishTurn(verdictId)
+        // 'open' endings: no system summary, just end
+
         endDebate()
       }
     },

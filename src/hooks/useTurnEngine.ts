@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react'
-import { useDebateStore, buildSystemPrompt } from '../store/debateStore'
+import { useDebateStore, buildSystemPrompt, buildClosingInstruction } from '../store/debateStore'
 import { streamCompletion, OpenRouterError } from '../lib/openRouter'
 import { isDemoMode, setServerProxyAvailable } from '../lib/demo'
 import { useDemoEngine } from './useDemoEngine'
+import { DEBATE_FORMATS, DEFAULT_FORMAT_ID } from '../data/debateFormats'
 
 interface UseTurnEngineReturn {
   runNextTurn: () => Promise<void>
@@ -49,9 +50,10 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
       .at(-1)
 
     const isClosingStatement = phase === 'concluding'
+    const format = DEBATE_FORMATS[config.format ?? DEFAULT_FORMAT_ID]
 
     const directorInstruction = isClosingStatement
-      ? 'Give your closing statement. Be memorable. This is your final word.'
+      ? buildClosingInstruction(format)
       : pendingDirectorInstruction
 
     if (isDemoMode()) {
@@ -72,7 +74,8 @@ export function useTurnEngine(onError: (msg: string) => void): UseTurnEngineRetu
       currentSide,
       intensity,
       directorInstruction,
-      lastOpponentTurn?.text ?? null
+      lastOpponentTurn?.text ?? null,
+      turnCount
     )
 
     const turnId = addTurn(currentSide, turnCount)

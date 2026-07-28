@@ -77,3 +77,6 @@ export const DEMO_CLOSING: Record<'left' | 'right', string> = {
 
 export const DEMO_VERDICT =
   "A razor-close debate. ARIA-X argued with precision and scale — the utilitarian case for AI creativity was relentless. Professor Kai fought for something harder to quantify: the irreducible value of human stakes, mortality, and meaning. Neither side fully prevailed. But perhaps that is the point — the most human thing about this debate was that it didn't have a clean answer."
+
+export const DEMO_SYNTHESIS =
+  "After genuine engagement with each other's positions, a synthesis emerges: AI and human creativity are not adversaries but collaborators. The tools we build are mirrors of our imagination — and in learning to create alongside them, we discover something new about what creation itself means."

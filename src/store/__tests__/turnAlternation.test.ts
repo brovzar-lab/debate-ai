@@ -17,6 +17,7 @@ const mockConfig: DebateConfig = {
   ],
   intensity: 2,
   turnCap: 2,
+  format: 'classic',
 }
 
 beforeEach(() => {

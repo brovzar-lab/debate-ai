@@ -1,3 +1,6 @@
+import type { DebateFormatId } from './data/debateFormats'
+export type { DebateFormatId }
+
 export interface Model {
   id: string
   name: string
@@ -23,6 +26,7 @@ export interface DebateConfig {
   debaters: [Debater, Debater]
   intensity: number
   turnCap: number
+  format: DebateFormatId
 }
 
 export type TurnStatus = 'streaming' | 'done'
