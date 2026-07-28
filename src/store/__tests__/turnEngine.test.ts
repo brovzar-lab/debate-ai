@@ -180,7 +180,7 @@ describe('buildSystemPrompt (brainstorm format)', () => {
   it('injects film craft criteria', () => {
     const prompt = buildSystemPrompt(brainstormConfig, 'left', 2, null, null)
     expect(prompt).toContain('CRAFT CRITERIA FOR FILM')
-    expect(prompt).toContain('Premise')
+    expect(prompt).toContain('Character engine')
   })
 
   it('injects general criteria when no subject provided', () => {

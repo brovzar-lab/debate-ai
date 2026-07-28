@@ -217,7 +217,7 @@ export function buildLeadSteerPrompt(config: DebateConfig, turns: Turn[]): strin
     .map((t) => `${t.side === 'left' ? leftName : rightName}: ${t.text}`)
     .join('\n\n')
 
-  return `You are the creative lead on this brainstorm session about: "${config.topic}".
+  return `You are the Showrunner — the creative lead synthesizing this brainstorm session about: "${config.topic}". Your role: momentum management and convergence triggering.
 
 SESSION SO FAR:
 ${sessionText}
@@ -225,7 +225,7 @@ ${sessionText}
 CRAFT CRITERIA FOR ${subject.toUpperCase()}:
 ${criteria}
 
-Your task: In 2–3 concise sentences, name the single strongest idea thread emerging in this session and explain exactly WHY it has the most potential according to the craft criteria above. Then direct ${leftName} and ${rightName} to develop THIS specific thread further in their next exchange. Speak as "Lead" — incisive and encouraging. No filler.`
+Your task (the Logline Hammer): In 2–3 incisive sentences, identify the single strongest thread in this session. Apply the Logline Hammer — compress that thread into one sentence right now, out loud, to expose whether it has real bones. Then name exactly why it scores highest against the craft criteria above. Direct ${leftName} and ${rightName} to develop THIS specific thread in their next exchange. Be the Showrunner: decisive, encouraging, no filler.`
 }
 
 export function buildLeadSynthesisPrompt(config: DebateConfig, turns: Turn[]): string {
@@ -239,7 +239,7 @@ export function buildLeadSynthesisPrompt(config: DebateConfig, turns: Turn[]): s
     .map((t) => `${t.side === 'left' ? leftName : rightName}: ${t.text}`)
     .join('\n\n')
 
-  return `You are the creative lead synthesizing this brainstorm session about: "${config.topic}".
+  return `You are the Showrunner closing out this brainstorm session about: "${config.topic}". This is the Best-Idea synthesis — the moment of convergence.
 
 FULL SESSION:
 ${sessionText}
@@ -249,13 +249,13 @@ ${criteria}
 
 Your task: Crown the single BEST IDEA from this session. Write your synthesis in exactly this format:
 
-🏆 BEST IDEA: [The strongest idea in one punchy sentence]
+🏆 BEST IDEA: [The strongest idea in one punchy, logline-quality sentence]
 
-WHY IT WINS: [2–3 sentences grounding it in the specific craft criteria above — be precise, not generic]
+WHY IT WINS: [2–3 sentences scoring it precisely against the craft criteria above — name the specific criteria it satisfies and how. Be concrete, not enthusiastic.]
 
 RUNNER-UP SHORTLIST:
-• [Second-best idea] — [one sentence on its specific merit]
-• [Third-best idea] — [one sentence on its specific merit]
+• [Second-best idea] — [one sentence on its specific merit against the criteria]
+• [Third-best idea] — [one sentence on its specific merit against the criteria]
 
-Be decisive. The best idea should feel surprising but inevitable in hindsight. Ground your reasoning in the craft criteria, not just enthusiasm.`
+Be decisive. The best idea should feel surprising but inevitable in hindsight. Rank against the craft criteria, not just gut feeling.`
 }
